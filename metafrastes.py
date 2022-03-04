@@ -1,8 +1,20 @@
-#angel andreou 26666 dimos
-
-from inspect import _void
 from os import error
+import sys
 
+class Token:
+	# properties: recognized_string, family, line_numbers
+	def __init__(self, family, recognized_string, line_number):
+		self.family = family
+		self.recognized_string = recognized_string
+		self.line_number = line_number
+
+	def set_family(self, family_type): # What does this do?
+		self.family_type = family_type
+
+class Family: 
+	def __init__(self):
+		pass
+	# TODO make family things
 
 def lex(input_file):
 	while True:
@@ -97,31 +109,28 @@ def lex(input_file):
 				pass
 			else:
 				# TODO return token >
-				error(": must be followed by =", line_number, char_number)
+				error(": must be followed by =") # TODO make this nice
 
-		''' automaton state 6
-		# char = '#'
-		#elif char == '#':
-			token_string = char
+		# automaton state 6
+		#COMMENTS
+		elif char=='#':
 			char = input_file.read(1)
-			if char == '}':
-				token_string += char
-				# TODO return token <=
-				pass
-			else:
-				# TODO return token >
-				error(": must be followed by =", line_number, char_number)'''
+			while char !='#':
+				char = input_file.read(1)
+				#todo line number ++ if /n
+				if char=='': 
+					error("TODO line number")
 
-		#delimeters , ; ( ) . 
-		elif char == ',':
-			token_string = char
 		
-			token_string = char
+
+		#delimeters , ; 
+		elif char == ',':
+			token_string = char	# TODO terurn token
 		elif char == ';':
-			token_string = char
+			token_string = char # TODO terurn token
 		#EOF
-			token_string = char
 		elif char == '':
+			pass	# TODO return token
 			#EOF
 		
 		#GROUPING
@@ -146,13 +155,14 @@ def lex(input_file):
 		elif char=='#':
 			char = input_file.read(1)
 			while char !='#':
-			 char = input_file.read(1)
-			 #todo line number ++ if /n
-			 if char=='': 
-				error(#TODO line number#)
+				char = input_file.read(1)
+				#todo line number ++ if /n
+				if char=='': 
+					error() # TODO line numbers
+		else: 
+			error() # TODO line numbers
 
-		else: error(#todo wrong symbol)
-import sys
+
 def main():
 #def main(input_file):
 
