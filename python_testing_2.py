@@ -1,3 +1,6 @@
+from inspect import _void
+
+
 def lex(input_file):
 	while True:
 	
@@ -10,19 +13,79 @@ def lex(input_file):
 		
 		# automaton state 0
 		elif char == " " or char == "\n" or char == "\t":
-			print('state 0')
 			continue
 
 		# automaton state 1
+		# Keywords, identifiers
 		elif char.isalpha():
+			token_string = char
 			while char.isalpha() or char.isdigit():
-				print('state 1')
-				break
-			
-		#print(char)
+				char = input_file.read(1)
+				token_string += char
+				# TODO store line number
+				# TODO Backtracking
+		
+		# automaton state 2
+		# digits
+		elif char.isdigit():
+			token_string = char
+			while char.isdigit():
+				char = input_file.read(1)
+				token_string += char
+				# TODO store line number
+				# TODO Backtracking
+
+		# automaton symbols +,-,*,/,=
+		elif char == '+':
+				# TODO return token
+				pass
+		elif char == '-':
+			# TODO return token
+			pass
+		elif char == '*':
+			# TODO return token
+			pass
+		elif char == '/':
+			# TODO return token
+			pass
+		elif char == '+':
+			# TODO return token
+			pass
+
+		# automaton state 3
+		# char = '<'
+		elif char == '<':
+			token_string = char
+			char = input_file.read(1)
+			if char == '=':
+				token_string += char
+				# TODO return token <=
+				pass
+			elif char == '>':
+				# TODO return token <>
+				pass
+
+			else:
+				# TODO return token <
+				pass
+
+		# automaton state 4
+		# char = '>'
+		elif char == '<':
+			token_string = char
+			char = input_file.read(1)
+			if char == '=':
+				token_string += char
+				# TODO return token <=
+				pass
+			else:
+				# TODO return token >
+				pass
+
+		# automaton state 5
+
 
 import sys
-
 def main():
 #def main(input_file):
 
