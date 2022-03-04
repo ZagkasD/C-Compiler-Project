@@ -1,20 +1,8 @@
+#angel andreou 26666 dimos
+
+from inspect import _void
 from os import error
-import sys
 
-class Token:
-	# properties: recognized_string, family, line_numbers
-	def __init__(self, family, recognized_string, line_number):
-		self.family = family
-		self.recognized_string = recognized_string
-		self.line_number = line_number
-
-	def set_family(self, family_type): # What does this do?
-		self.family_type = family_type
-
-class Family: 
-	def __init__(self):
-		pass
-	# TODO make family things
 
 def lex(input_file):
 	while True:
@@ -109,28 +97,31 @@ def lex(input_file):
 				pass
 			else:
 				# TODO return token >
-				error(": must be followed by =") # TODO make this nice
+				error(": must be followed by =", line_number, char_number)
 
-		# automaton state 6
-		#COMMENTS
-		elif char=='#':
+		''' automaton state 6
+		# char = '#'
+		#elif char == '#':
+			token_string = char
 			char = input_file.read(1)
-			while char !='#':
-				char = input_file.read(1)
-				#todo line number ++ if /n
-				if char=='': 
-					error("TODO line number")
+			if char == '}':
+				token_string += char
+				# TODO return token <=
+				pass
+			else:
+				# TODO return token >
+				error(": must be followed by =", line_number, char_number)'''
 
-		
-
-		#delimeters , ; 
+		#delimeters , ; ( ) . 
 		elif char == ',':
-			token_string = char	# TODO terurn token
+			token_string = char
+		
+			token_string = char
 		elif char == ';':
-			token_string = char # TODO terurn token
+			token_string = char
 		#EOF
+			token_string = char
 		elif char == '':
-			pass	# TODO return token
 			#EOF
 		
 		#GROUPING
@@ -155,14 +146,13 @@ def lex(input_file):
 		elif char=='#':
 			char = input_file.read(1)
 			while char !='#':
-				char = input_file.read(1)
-				#todo line number ++ if /n
-				if char=='': 
-					error() # TODO line numbers
-		else: 
-			error() # TODO line numbers
+			 char = input_file.read(1)
+			 #todo line number ++ if /n
+			 if char=='': 
+				error(#TODO line number#)
 
-
+		else: error(#todo wrong symbol)
+import sys
 def main():
 #def main(input_file):
 
