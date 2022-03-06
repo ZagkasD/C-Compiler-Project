@@ -228,6 +228,30 @@ def lex():
 #========================
 #      Syntax Analyzer
 #========================
+#class Parser():
+	#pass
+def program():
+	global token
+	if token.recognized_string == 'program':
+		token=lex();
+		if (token.family == 'id'):
+			##token = self.get_token()
+			##self.block()
+			token=lex()
+			block()
+			if token.recognized_string == '.':
+				token=lex();
+				if token.recognized_string == 'eof':
+					token = lex()
+				else:
+					error('The program is over',line_number)
+			error('The program must end with .',line_number)
+		error('The program s name must be an id ',line_number)
+	error('The program must start with the keyword program',line_number)
+
+
+
+
 def condition():
 	pass
 def block():
