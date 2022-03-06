@@ -251,8 +251,7 @@ def program():
 
 
 
-def block():
-	pass
+
 def condition():
 	pass
 def block():
