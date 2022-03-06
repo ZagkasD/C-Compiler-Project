@@ -29,6 +29,9 @@ class Family:
 	delimiter = 7	# ,,.,;
 	groupSymbol = 8	# (,),{,},[,]
 
+keywords=['program','declare','if','else','while','switchcase','forcase','incase','case','default','not','and','or','function',
+		  'procedure','call','return','in', 'inout','input', 'print']
+
 # argv[1] is the first console argument, aka file name
 def error( error_msg,line_number):
 	print("Error in File",sys.argv[1], 'line', line_number, error_msg)
