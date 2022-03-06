@@ -1,5 +1,15 @@
 # Zagkas Dimosthenis 4359 cse84359
 # Andreou Aggelos    4628 cse84628
+
+'''
+	Notes
+
+get_token() why? lex() does the same thing
+
+Γιατί να φτιάξουμε μία συνάρτηση get_token για να παίρνουμε την επόμενη λεκτική μονάδα από τον lex?
+Εάν απλά καλούσαμε το token = lex() το αποτέλεσμα δεν θα ήταν το ίδιο;
+
+'''
 import sys
 
 class Token:
@@ -43,6 +53,7 @@ keywords=['program','declare','if','else','while','switchcase','forcase','incase
 # Global Variables
 line_number = 1
 token = Token(None,None,None)
+input_file = None
 
 # argv[1] is the first console argument, aka file name
 def error( error_msg,line_number):
@@ -54,8 +65,8 @@ def error( error_msg,line_number):
 #      Lex Analyzer
 #========================
 
-def lex(input_file):
-	global line_number
+def lex():
+	global line_number, input_file
 	while True: 
 	
 		# read first character
@@ -214,16 +225,75 @@ def lex(input_file):
 		else: 
 			error('Illegal character.',line_number)
 
+#========================
+#      Syntax Analyzer
+#========================
+def condition():
+	pass
+def block():
+	pass
+def relationalOper():
+	pass
+def optionalSign():
+	pass
+def term():
+	pass
+def addOper():
+	pass
+
+def if_stat():
+	global token
+	if token.recognized_string == '(':
+		token = lex()
+		condition()
+		if token.recognized_string == ')':
+			token = lex()
+			block()
+			elsepart()
+		else:
+			error('Expected ) at the end of if statement.')
+	else:
+		error('Expected ( at the start of if statement')
+
+def elsepart():
+	global token
+	if token.recognized_string == 'else':
+		token = lex()
+		block()
+
+def boolFactor():
+	global token
+	if token.recognized_string == 'not':
+		token = lex()
+		condition()
+	elif token.recognized_string == '(':
+		token = lex()
+		condition
+		if token.recognized_string == ')':
+			token = lex()
+		else:
+			error('Right bracket expected.')
+	else:
+		expression()
+		relationalOper()
+		expression()
+
+def expression():
+	global token
+	optionalSign()
+	term()
+	while token.recognized_string == '+' or token.recognized_string == '-':
+		addOper()
+		term()
+
 
 def main():
 #def main(input_file):
+	global input_file, token
 
 	#input_file = open(input_file,'r')
 	input_file = open('testing.txt','r')
-	while True:
-		token = lex(input_file)
-		print(token.recognized_string, 'family:', token.family_type, 'line:', token.line_number)
-
+	token = lex()
 
 #main(sys.argv[1])
 main()
