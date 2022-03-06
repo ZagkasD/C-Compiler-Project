@@ -1,11 +1,22 @@
-<<<<<<< Updated upstream
+
 # This is a test 1
-=======
 
 # This is test comment
 
 #this is angels commmit
->>>>>>> Stashed changes
+
+
+ # test
+# This is test comment
+
+##test ange
+
+# This is a test 1
+# This is a test 2
+
+# This is a test 3
+ main
+
 from os import error
 import sys
 
