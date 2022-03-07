@@ -1,8 +1,6 @@
 # Zagkas Dimosthenis 4359 cse84359
 # Andreou Aggelos    4628 cse84628
 
-
-from distutils.log import error
 import sys
 
 class Token:
@@ -293,11 +291,45 @@ class Parser(Lex):
         while self._token._recognized_string == 'declare':
             self.get_token()
             self.varlist()
-        
-    def varlist(self):
-        
-        pass
 
+    def varlist(self):
+        self.get_token()
+        if self._token._family == 'id':
+            self.get_token()
+            while self._token._recognized_string == ',':
+                self.get_token()
+                if self._token._family != 'id':
+                    break
+
+    def subprograms(self):
+        self.get_token()
+        if self._token._recognized_string == 'function':
+            self.get_token()
+            if self._token._family == 'id':
+                self.get_token()
+                if self._token._recognized_string == '(':
+                    self.formalparlist()
+                    if self._token._recognized_string != ')':
+                        self.error()
+                else:
+                    self.error()
+                self.get_token()
+                self.block()
+        elif self._token._recognized_string == 'procedure':
+            self.get_token()
+            if self._token._family == 'id':
+                self.get_token()
+                if self._token._recognized_string == '(':
+                    self.formalparlist()
+                    if self._token._recognized_string != ')':
+                        self.error()
+                else:
+                    self.error()
+                self.get_token()
+                self.block()
+
+    def formalparlist(self):
+        pass
     def actualparitem():
         pass
 
@@ -365,9 +397,6 @@ class Parser(Lex):
         pass
 
     def subprogram():
-        pass
-
-    def subprograms():
         pass
 
     def switchcaseStat():
