@@ -2,6 +2,7 @@
 # Andreou Aggelos    4628 cse84628
 
 
+from distutils.log import error
 import sys
 
 class Token:
@@ -229,7 +230,7 @@ class Parser(Lex):
             self.get_token()
             if self._token._family == 'id':
                 self.get_token()
-                #self.block()
+                self.block()
                 if self._token._recognized_string == '.':
                     self.get_token()
                     if self._token._family != 9:    # end of file
@@ -249,8 +250,53 @@ class Parser(Lex):
     def get_token(self):
         self._token = self.next_token()
 
-    #def error(self):
-    #    pass     
+    def ifStat(self):
+        self.get_token()
+        if self._token._recognized_string == '(':
+            self.get_token()
+            self.condition()
+            if self._token._recognized_string == ')':
+                self.get_token()
+                self.statements()
+            else:
+                self.error('Expected char << ) >>. Instead got {0:s}'.format(self._token._recognized_string),self._line_number)
+            self.elsepart()
+        else:
+            self.error('Expected char << () >>. Instead got {0:s}'.format(self._token._recognized_string),self._line_number)
+            
+    def elsepart(self):
+        if self._token._recognized_string == 'else':
+            self.get_token()
+            self.statements()
+
+    def boolterm(self):
+        self.boolfactor()
+        while self._token._recognized_string == 'and':
+            self.get_token
+            self.boolfactor()
+
+    def block(self):
+        self.get_token()
+        if self._token._recognized_string == '{':
+            self.declarations()
+            self.subprograms()
+            self.blockstatements()
+            if self._token._recognized_string == '}':
+                self.get_token()
+            else:
+                self.error()
+        else:
+            self.error
+        
+    def declarations(self):
+        self.get_token()
+        while self._token._recognized_string == 'declare':
+            self.get_token()
+            self.varlist()
+        
+    def varlist(self):
+        
+        pass
 
     def actualparitem():
         pass
@@ -264,28 +310,16 @@ class Parser(Lex):
     def assignStat():
         pass
 
-    def block(self):
-        pass
-
     def blockstatements():
         pass
 
     def boolfactor():
         pass
 
-    def boolterm():
-        pass
-
     def callStat():
         pass
 
     def condition():
-        pass
-
-    def declarations():
-        pass
-
-    def elsepart():
         pass
 
     def expression():
@@ -301,9 +335,6 @@ class Parser(Lex):
         pass
 
     def idtail():
-        pass
-    
-    def ifStat():
         pass
     
     def incaseStat():
@@ -343,9 +374,6 @@ class Parser(Lex):
         pass
 
     def term():
-        pass
-
-    def varlist():
         pass
 
     def whileStat():
