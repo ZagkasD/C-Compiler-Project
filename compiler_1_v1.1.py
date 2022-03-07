@@ -1,15 +1,6 @@
 # Zagkas Dimosthenis 4359 cse84359
 # Andreou Aggelos    4628 cse84628
 
-'''
-	Notes
-
-get_token() why? lex() does the same thing
-
-Γιατί να φτιάξουμε μία συνάρτηση get_token για να παίρνουμε την επόμενη λεκτική μονάδα από τον lex?
-Εάν απλά καλούσαμε το token = lex() το αποτέλεσμα δεν θα ήταν το ίδιο;
-
-'''
 import sys
 
 class Token:
