@@ -50,15 +50,11 @@ class Lex(Token):
     def __del__(self):
         print('Destructor called. Lex object deleted.')
 
-    def error(self,error_msg,line_number,token_string):
-        print("Error in file:"+sys.argv[1]+' || line:'+str(line_number)+' || '+error_msg+' << '+token_string+' >>')
-#        print("Error in file: testing.txt"+' || line: '+str(line_number)+' || << '+token_string+' >> '+error_msg)
+    def error(self,error_msg,line_number):
+#        print("Error in file:"+sys.argv[1]+' || line:'+str(line_number)+' || '+error_msg+' << '+token_string+' >>')
+        print("Error in file: testing.txt"+' || line: '+str(line_number)+' || '+error_msg)
         exit(1)
 
-    def error_simple(self,error_msg,line_number):
-        print("Error in file:"+sys.argv[1]+' || line:'+str(line_number)+'||'+error_msg)
-#        print("Error in file: testing.txt"+' || line: '+str(line_number)+' || '+error_msg)
-        exit(1)
 
     def next_token(self):
         while True:
@@ -72,7 +68,8 @@ class Lex(Token):
 
      		# check eof
             if not char:
-                break
+                token_string = 'End Of File'
+                return Token(Family.end_of_file,token_string,self._line_number)
 
             # automaton state 1
             # Keywords, identifiers
@@ -81,7 +78,7 @@ class Lex(Token):
                 while char.isalpha() or char.isdigit():
                     if len(token_string) > 30:
                         token_string += char
-                        self.error('Length of word can not exceed 30.',self._line_number,token_string)
+                        self.error('Length of word can not exceed 30 characters. << {0:s} >>'.format(token_string),self._line_number)
                     char = self._input_file.read(1)
                     # Need a second check for char
                     # Ex. input: i<3
@@ -90,7 +87,8 @@ class Lex(Token):
                     if char.isalpha() or char.isdigit():
                         token_string += char
                 # Backtracking
-                self._input_file.seek(self._input_file.tell() - 1)
+                if char != '':
+                    self._input_file.seek(self._input_file.tell() - 1)
                 if token_string in keywords:
                     return Token(Family.keyword,token_string,self._line_number)
                 else:
@@ -104,9 +102,9 @@ class Lex(Token):
                     char = self._input_file.read(1)
                     if char.isalpha():
                         token_string += char
-                        self.error("Arithmetic constants can not contain letters.",self._line_number,token_string)
+                        self.error("Arithmetic constants can not contain letters. << {0:s} >>".format(token_string),self._line_number)
                     if int(token_string) > (2**32 -1) or int(token_string) < (-(2**32 -1)):
-                        self.error_simple('Arithmetic constants must be within -(2^32 - 1) and (2^32 - 1)',self._line_number)
+                        self.error('Arithmetic constants must be within -(2^32 - 1) and (2^32 - 1).',self._line_number)
                     if char.isdigit():
                         token_string += char
                 self._input_file.seek(self._input_file.tell() - 1)
@@ -149,7 +147,7 @@ class Lex(Token):
                     return Token(Family.assignment, token_string, self._line_number)
                 else:				 
                     token_string += char
-                    self.error_simple('Char << : >> must be followed by char << = >>', self._line_number)	
+                    self.error('Char << : >> must be followed by char << = >>.', self._line_number)	
                     
             # Symbols +,-,*,/,=
             elif char == '+':
@@ -216,30 +214,163 @@ class Lex(Token):
                         self._line_number += 1
                     # If we reach eof while in comments, error
                     if char=='': 
-                        self.error_simple('Reached eof without closing comments',self._line_number)
+                        self.error('Reached eof without closing comments.',self._line_number)
             else: 
                 token_string = char
-                self.error('Illegal character',self._line_number,token_string)
+                self.error('Illegal character << {0:s} >>.'.format(token_string),self._line_number)
 
 class Parser(Lex):
     def __init__(self, family=None, recognized_string=None, line_number=None, file_name=None, token: Token = None, lexical_analyzer:Lex=None):
         super().__init__(family, recognized_string, line_number, file_name, token)
         self._lexical_analyzer = lexical_analyzer
 
+    def program(self):
+        if self._token._recognized_string == 'program':
+            self.get_token()
+            if self._token._family == 'id':
+                self.get_token()
+                #self.block()
+                if self._token._recognized_string == '.':
+                    self.get_token()
+                    if self._token._family != 9:    # end of file
+                        self.error('No characters are allowed after the fullstop, indicating the end of the program.',self._line_number)
+                else:
+                    self.error('Every program should end with a fullstop. Fullstop at the end is missing.',self._line_number)
+            else:
+                self.error('The name of the program expected, after the keyword << program >> in line << {0:d} >>. The illegal program name << {1:s} >> appeared.'.format(self._line_number,self._token._recognized_string), self._line_number)
+        else:
+            self.error('Keyword << program >> expected in line {0:d}. All programs should start with the keyword << program >>. Instead, the word << {1:s} >> appeared.'.format(self._line_number,self._token._recognized_string),self._line_number)
+    
+    def syntax_analyzer(self):
+        self.get_token()
+        self.program()
+        print('Compilation successfully completed.')
+
+    def get_token(self):
+        self._token = self.next_token()
+
+    #def error(self):
+    #    pass     
+
+    def actualparitem():
+        pass
+
+    def actualparlist():
+        pass
+
+    def addoperator():
+        pass
+
+    def assignStat():
+        pass
+
+    def block(self):
+        pass
+
+    def blockstatements():
+        pass
+
+    def boolfactor():
+        pass
+
+    def boolterm():
+        pass
+
+    def callStat():
+        pass
+
+    def condition():
+        pass
+
+    def declarations():
+        pass
+
+    def elsepart():
+        pass
+
+    def expression():
+        pass
+
+    def factor():
+        pass
+
+    def forcaseStat():
+        pass
+
+    def formalparitem():
+        pass
+
+    def idtail():
+        pass
+    
+    def ifStat():
+        pass
+    
+    def incaseStat():
+        pass
+
+    def inputStat():
+        pass
+
+    def muloperator():
+        pass
+
+    def optionalsign():
+        pass
+
+    def printStat():
+        pass
+
+    def reloperator():
+        pass
+
+    def returnStat():
+        pass
+
+    def statement():
+        pass
+
+    def statements():
+        pass
+
+    def subprogram():
+        pass
+
+    def subprograms():
+        pass
+
+    def switchcaseStat():
+        pass
+
+    def term():
+        pass
+
+    def varlist():
+        pass
+
+    def whileStat():
+        pass
+
 keywords=['program','declare','if','else','while','switchcase','forcase','incase','case','default','not','and','or','function',
 		  'procedure','call','return','in', 'inout','input', 'print']
 
-def main(input_file):
-#def main():
-    input_file = open(input_file,'r')
-#    input_file = open('testing.txt','r')
+#def main(input_file):
+def main():
+#    input_file = open(input_file,'r')
+    input_file = open('testing.txt','r')
 
-    l = Lex(input_file)
-    k = Token()
+    #l = Lex(input_file)
+    #k = Token()
+    p = Parser(input_file)
+    
+    p.syntax_analyzer()
+    
+    '''
     k = l.next_token()
     while k != None:
         print(k)
         k = l.next_token()
+    '''
 
-main(sys.argv[1])
-#main()
+#main(sys.argv[1])
+main()
