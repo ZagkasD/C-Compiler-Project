@@ -1,8 +1,6 @@
 # Zagkas Dimosthenis 4359 cse84359
 # Andreou Aggelos    4628 cse84628
 
-from lib2to3.pgen2 import token
-from os import stat
 import sys
 
 class Token:
