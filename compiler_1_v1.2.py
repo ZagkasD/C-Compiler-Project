@@ -453,18 +453,21 @@ class Parser(Lex):
             self.error('Expected << ( >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
 
     def switchcaseStat(self):
-        while self._token._recognized_string == 'case':
-            self.get_token()
-            if self._token._recognized_string == '(':
+        if self._token._recognized_string == 'case':
+            while self._token._recognized_string == 'case':
                 self.get_token()
-                self.condition()
-                if self._token._recognized_string == ')':
+                if self._token._recognized_string == '(':
                     self.get_token()
+                    self.condition()
+                    if self._token._recognized_string == ')':
+                        self.get_token()
+                    else:
+                            self.error('Expected << ) >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
+                    self.statements()
                 else:
-                    self.error('Expected << ) >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
-                self.statements()
-            else:
                     self.error('Expected << ( >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
+        else:
+            self.error('Expected << case >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)            
         if self._token._recognized_string == 'default':
             self.get_token()
             self.statements()
@@ -472,18 +475,21 @@ class Parser(Lex):
             self.error('Expected << default >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
 
     def forcaseStat(self):
-        while self._token._recognized_string == 'case':
-            self.get_token()
-            if self._token._recognized_string == '(':
+        if self._token._recognized_string == 'case':
+            while self._token._recognized_string == 'case':
                 self.get_token()
-                self.condition()
-                if self._token._recognized_string == ')':
+                if self._token._recognized_string == '(':
                     self.get_token()
+                    self.condition()
+                    if self._token._recognized_string == ')':
+                        self.get_token()
+                    else:
+                            self.error('Expected << ) >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
+                    self.statements()
                 else:
-                        self.error('Expected << ) >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
-                self.statements()
-            else:
-                self.error('Expected << ( >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
+                    self.error('Expected << ( >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
+        else:
+            self.error('Expected << case >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)            
         if self._token._recognized_string == 'default':
             self.get_token()
             self.statements()
@@ -491,18 +497,26 @@ class Parser(Lex):
             self.error('Expected << default >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
 
     def incaseStat(self):
-        while self._token._recognized_string == 'case':
-            self.get_token()
-            if self._token._recognized_string == '(':
+        if self._token._recognized_string == 'case':
+            while self._token._recognized_string == 'case':
                 self.get_token()
-                self.condition()
-                if self._token._recognized_string == ')':
+                if self._token._recognized_string == '(':
                     self.get_token()
+                    self.condition()
+                    if self._token._recognized_string == ')':
+                        self.get_token()
+                    else:
+                            self.error('Expected << ) >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
+                    self.statements()
                 else:
-                    self.error('Expected << ) >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
-                self.statements()
-            else:
-                self.error('Expected << ( >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
+                    self.error('Expected << ( >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
+        else:
+            self.error('Expected << case >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)            
+        if self._token._recognized_string == 'default':
+            self.get_token()
+            self.statements()
+        else:
+            self.error('Expected << default >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
 
     def returnStat(self):
         if self._token._recognized_string == '(':
