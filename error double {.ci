@@ -1,0 +1,6 @@
+program errordouble{
+{{
+# declarations for main #
+declare i;
+print(i);
+}.
