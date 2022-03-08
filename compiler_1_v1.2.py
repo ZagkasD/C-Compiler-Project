@@ -10,7 +10,7 @@ class Token:
         self._line_number = line_number
     
     def __str__(self):
-        return (self._recognized_string+' \tfamily:"'+self._family+'", line:'+str(self._line_number))
+        return (self._recognized_string+' \tfamily:"'+str(self._family)+'", line:'+str(self._line_number))
 
   
 class Family: 
@@ -669,16 +669,19 @@ def main():
 #    input_file = open(input_file,'r')
     input_file = open('testing.txt','r')
 
-    #l = Lex(input_file)
-    #k = Token()
+    # l = Lex(input_file)
+    # k = Token()
     p = Parser(input_file)
-    
+
     p.syntax_analyzer()
-    
+
+    # For testing lex
     # k = l.next_token()
-    # while k != None:
+    # while k._recognized_string != 'End Of File':
     #     print(k)
-    #     k = l.next_token()
+    #     k = l.next_token()    
+   
+
 
 #main(sys.argv[1])
 main()
