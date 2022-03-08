@@ -22,7 +22,7 @@ class Family:
 	id          = 'id'			# identifiers
 	addOperator = 'addOperator'	# +,-
 	mulOperator = 'mulOperator'	# *,/
-	relOperator = 'relOperator'	# ==,>=,<,<>
+	relOperator = 'relOperator'	# ==,>=,<,<>,=
 	assignment  = 'assignmet'	# :=
 	delimiter   = 'delimiter'   # ,,.,;
 	groupSymbol = 'groupSymbol'	# (,),{,},[,]
@@ -166,6 +166,10 @@ class Lex(Token):
             elif char == '/':
                 token_string  = char
                 return Token(Family.mulOperator, token_string, self._line_number)
+            
+            elif char == '=':
+                token_string  = char
+                return Token(Family.relOperator, token_string, self._line_number)
 
             # Delimeters , ; 
             elif char == ',':
@@ -251,7 +255,6 @@ class Parser(Lex):
         self._token = self.next_token()
 
     def ifStat(self):
-        self.get_token()
         if self._token._recognized_string == '(':
             self.get_token()
             self.condition()
@@ -373,8 +376,7 @@ class Parser(Lex):
         else:
             self.error('Expected << in >> or << inout >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
 
-    def statements(self): 
-        self.get_token()
+    def statements(self):
         if self._token._recognized_string == '{':
             self.get_token()
             self.statement()
@@ -388,8 +390,9 @@ class Parser(Lex):
                 self.error('Expected char << '+curly_bracket_close+' >>. Instead got char << {1} >>'.format(curly_bracket_close,self._token._recognized_string), self._line_number)
         else:
             self.statement()
-            self.get_token()
-            if self._token._recognized_string != ';':
+            if self._token._recognized_string == ';':
+                self.get_token()
+            else:
                 self.error('Expected << ; >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)        
 
     def blockstatements(self):
@@ -441,8 +444,11 @@ class Parser(Lex):
 
     def whileStat(self):
         if self._token._recognized_string == '(':
+            self.get_token()
             self.condition()
-            if self._token._recognized_string != ')':
+            if self._token._recognized_string == ')':
+                self.get_token()
+            else:
                 self.error('Expected << ) >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
             self.statements()
         else:
@@ -452,15 +458,17 @@ class Parser(Lex):
         while self._token._recognized_string == 'case':
             self.get_token()
             if self._token._recognized_string == '(':
-                self.condition()
                 self.get_token()
-                if self._token._recognized_string != ')':
+                self.condition()
+                if self._token._recognized_string == ')':
+                    self.get_token()
+                else:
                     self.error('Expected << ) >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
                 self.statements()
-                self.get_token()
             else:
                     self.error('Expected << ( >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
         if self._token._recognized_string == 'default':
+            self.get_token()
             self.statements()
         else:
             self.error('Expected << default >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
@@ -469,15 +477,17 @@ class Parser(Lex):
         while self._token._recognized_string == 'case':
             self.get_token()
             if self._token._recognized_string == '(':
-                self.condition()
                 self.get_token()
-                if self._token._recognized_string != ')':
+                self.condition()
+                if self._token._recognized_string == ')':
+                    self.get_token()
+                else:
                         self.error('Expected << ) >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
                 self.statements()
-                self.get_token()
             else:
                 self.error('Expected << ( >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
         if self._token._recognized_string == 'default':
+            self.get_token()
             self.statements()
         else:
             self.error('Expected << default >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
@@ -486,12 +496,13 @@ class Parser(Lex):
         while self._token._recognized_string == 'case':
             self.get_token()
             if self._token._recognized_string == '(':
-                self.condition()
                 self.get_token()
-                if self._token._recognized_string != ')':
+                self.condition()
+                if self._token._recognized_string == ')':
+                    self.get_token()
+                else:
                     self.error('Expected << ) >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
                 self.statements()
-                self.get_token()
             else:
                 self.error('Expected << ( >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
 
@@ -510,9 +521,11 @@ class Parser(Lex):
         if self._token._family == 'id':
             self.get_token()
             if self._token._recognized_string == '(':
-                self.actualparlist()
                 self.get_token()
-                if self._token._recognized_string != ')':
+                self.actualparlist()
+                if self._token._recognized_string == ')':
+                    self.get_token()
+                else:
                     self.error('Expected << ) >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
             else:
                 self.error('Expected << ( >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)                
@@ -535,7 +548,9 @@ class Parser(Lex):
             self.get_token()
             if self._token._family == 'id':
                 self.get_token()
-                if self._token._recognized_string != ')':
+                if self._token._recognized_string == ')':
+                    self.get_token()
+                else:
                     self.error('Expected << ) >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
             else:
                 self.error('Expected << id >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
@@ -564,24 +579,27 @@ class Parser(Lex):
     def condition(self):
         self.boolterm()
         while self._token._recognized_string == 'or':
-            self.boolterm()
             self.get_token()
+            self.boolterm()
 
     def boolfactor(self):
-        self.get_token()
         if self._token._recognized_string == 'not':
             self.get_token()
             if self._token._recognized_string == '[':
-                self.condition()
                 self.get_token()
-                if self._token._recognized_string != ']':
+                self.condition()
+                if self._token._recognized_string == ']':
+                    self.get_token()
+                else:
                     self.error('Expected << ] >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
             else:
                 self.error('Expected << [ >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
         elif self._token._recognized_string == '[':
-            self.condition()
             self.get_token()
-            if self._token._recognized_string != ']':
+            self.condition()
+            if self._token._recognized_string == ']':
+                self.get_token()
+            else:
                 self.error('Expected << ] >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
         else:
             self.expression()
@@ -638,7 +656,7 @@ class Parser(Lex):
     def addoperator(self):
         if self._token._recognized_string == '+' or self._token._recognized_string == '-':
             self.get_token()
-
+        # Doesn't need error. It's called from optionalSign()
 
     def muloperator(self):
         if self._token._family == 'mulOperator':
