@@ -1,6 +1,7 @@
 # Zagkas Dimosthenis 4359 cse84359
 # Andreou Aggelos    4628 cse84628
 
+from lib2to3.pgen2 import token
 import sys
 
 class Token:
@@ -227,7 +228,6 @@ class Parser(Lex):
         if self._token._recognized_string == 'program':
             self.get_token()
             if self._token._family == 'id':
-                self.get_token()
                 self.block()
                 if self._token._recognized_string == '.':
                     self.get_token()
@@ -260,7 +260,7 @@ class Parser(Lex):
                 self.error('Expected char << ) >>. Instead got {0:s}'.format(self._token._recognized_string),self._line_number)
             self.elsepart()
         else:
-            self.error('Expected char << () >>. Instead got {0:s}'.format(self._token._recognized_string),self._line_number)
+            self.error('Expected char << ( >>. Instead got << {0:s} >>'.format(self._token._recognized_string),self._line_number)
             
     def elsepart(self):
         if self._token._recognized_string == 'else':
@@ -282,14 +282,15 @@ class Parser(Lex):
             if self._token._recognized_string == '}':
                 self.get_token()
             else:
-                self.error()
+                curly_bracket_close = '}'
+                self.error('Expected char << '+curly_bracket_close+' >>. Instead got char << {1} >>'.format(curly_bracket_close,self._token._recognized_string), self._line_number)
         else:
-            self.error
+            curly_bracket_open = '{'
+            self.error('Expected char << '+curly_bracket_open+' >>. Instead got char << {1} >>'.format(curly_bracket_open,self._token._recognized_string), self._line_number)
         
     def declarations(self):
         self.get_token()
         while self._token._recognized_string == 'declare':
-            self.get_token()
             self.varlist()
 
     def varlist(self):
@@ -299,9 +300,15 @@ class Parser(Lex):
             while self._token._recognized_string == ',':
                 self.get_token()
                 if self._token._family != 'id':
+                    self.get_token()
                     break
+                self.get_token()
+            self.get_token()
 
-    def subprograms(self):
+    def subprograms(self): # while condition?
+        pass
+        
+    def subprogram(self):
         self.get_token()
         if self._token._recognized_string == 'function':
             self.get_token()
@@ -310,11 +317,13 @@ class Parser(Lex):
                 if self._token._recognized_string == '(':
                     self.formalparlist()
                     if self._token._recognized_string != ')':
-                        self.error()
+                        self.error('Expected << ) >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
                 else:
-                    self.error()
+                    self.error('Expected << ( >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
                 self.get_token()
                 self.block()
+            else:
+                self.error('Expected << id >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
         elif self._token._recognized_string == 'procedure':
             self.get_token()
             if self._token._family == 'id':
@@ -322,14 +331,218 @@ class Parser(Lex):
                 if self._token._recognized_string == '(':
                     self.formalparlist()
                     if self._token._recognized_string != ')':
+                        self.error('Expected << ) >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
+                else:
+                    self.error('Expected << ( >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
+                self.get_token()
+                self.block()
+            else:
+                self.error('Expected << id >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
+        else:
+            self.error('Expected << function >> or << procedure >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
+
+    def formalparlist(self):
+        self.formalparitem()
+        self.get_token()
+        while self._token._recognized_string == ',':
+            self.formalparitem()
+            self.get_token()
+
+    def formalparitem(self):
+        self.get_token()
+        if self._token._recognized_string == 'in':
+            self.get_token()
+            if self._token._family != 'id':
+                self.error('Expected << id >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
+        elif self._token._recognized_string == 'inout':
+            self.get_token()
+            if self._token._family != 'id':
+                self.error('Expected << id >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
+        else:
+            self.error('Expected << in >> or << inout >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
+
+    def statements(self): # WRONG
+        self.statement()
+        self.get_token()
+        if self._token._recognized_string == ';':
+            return
+        elif self._token._recognized_string == '{':
+            self.statement()
+            self.get_token()
+            while self._token._recognized_string == ';':
+                self.statement()
+                self.get_token()
+            if self._token._recognized_string != '}':
+                self.error()
+        else:
+            self.error()
+        
+
+    def blockstatements(self):
+        self.statement()
+        self.get_token()
+        while self._token._recognized_string == ';':
+            self.statement()
+            self.get_token()
+
+
+    def statement(self): # whats the condition for choosing?
+        self.assignStat()
+        pass
+
+    def assignStat(self):
+        self.get_token()
+        if self._token._family == 'id':
+            self.get_token()
+            if self._token._recognized_string == ':=':
+                self.expression()
+            else:
+                self.error('Expected << := >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
+        else:
+            self.error('Expected << id >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
+
+    def whileStat(self):
+        self.get_token()
+        if self._token._recognized_string == 'while':
+            self.get_token()
+            if self._token._recognized_string == '(':
+                self.condition()
+                self.get_token()
+                if self._token._recognized_string != ')':
+                    self.error('Expected << ) >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
+                self.statements()
+            else:
+                self.error('Expected << ( >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
+        else:
+            self.error('Expected << while >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
+
+    def switchcaseStat(self):
+        self.get_token()
+        if self._token._recognized_string == 'switchcase':
+            self.get_token()
+            while self._token._recognized_string == 'case':
+                self.get_token()
+                if self._token._recognized_string == '(':
+                    self.condition()
+                    self.get_token()
+                    if self._token._recognized_string != ')':
+                        self.error()
+                    self.statements()
+                    self.get_token()
+                else:
+                    self.error()
+            if self._token._recognized_string == 'default':
+                self.statements()
+            else:
+                self.error()
+        else:
+            self.error()
+
+    def forcaseStat(self):
+        self.get_token()
+        if self._token._recognized_string == 'forcase':
+            self.get_token()
+            while self._token._recognized_string == 'case':
+                self.get_token()
+                if self._token._recognized_string == '(':
+                    self.condition()
+                    self.get_token()
+                    if self._token._recognized_string != ')':
+                        self.error()
+                    self.statements()
+                    self.get_token()
+                else:
+                    self.error()
+            if self._token._recognized_string == 'default':
+                self.statements()
+            else:
+                self.error()
+        else:
+            self.error()
+
+    def incaseStat(self):
+        self.get_token()
+        if self._token._recognized_string == 'incase':
+            self.get_token()
+            while self._token._recognized_string == 'case':
+                self.get_token()
+                if self._token._recognized_string == '(':
+                    self.condition()
+                    self.get_token()
+                    if self._token._recognized_string == ')':
+                        self.statements()
+                        self.get_token()
+                    else:
                         self.error()
                 else:
                     self.error()
-                self.get_token()
-                self.block()
+        else:
+            self.error()
 
-    def formalparlist(self):
+    def returnStat(self):
+        self.get_token()
+        if self._token._recognized_string == 'return':
+            self.get_token()
+            if self._token._recognized_string == '(':
+                self.expression()
+                self.get_token()
+                if self._token._recognized_string != ')':
+                    self.error()
+            else:
+                self.error()
+        else:
+            self.error()
+
+    def callStat(self):
+        self.get_token()
+        if self._token._recognized_string == 'call':
+            self.get_token()
+            if self._token._family == 'id':
+                self.get_token()
+                if self._token._recognized_string == '(':
+                    self.actualparlist()
+                    self.get_token()
+                    if self._token._recognized_string != ')':
+                        self.error()
+                else:
+                    self.error()                
+            else:
+                self.error()
+        else:
+            self.error()
+
+    def printStat(self):
+        self.get_token()
+        if self._token._recognized_string == 'print':
+            self.get_token()
+            if self._token._recognized_string == '(':
+                self.expression()
+                self.get_token()
+                if self._token._recognized_string != ')':
+                    self.error()
+            else:
+                self.error()
+        else:
+            self.error()
+
+    def inputStat(self):
+        self.get_token()
+        if self._token._recognized_string == 'input':
+            self.get_token()
+            if self._token._recognized_string == '(':
+                self.get_token()
+                if self._token._family == 'id':
+                    self.get_token()
+                    if self._token._recognized_string != ')':
+                        self.error()
+                else:
+                    self.error()
+            else:
+                self.error()
+        else:
+            self.error()
         pass
+
     def actualparitem():
         pass
 
@@ -339,16 +552,7 @@ class Parser(Lex):
     def addoperator():
         pass
 
-    def assignStat():
-        pass
-
-    def blockstatements():
-        pass
-
     def boolfactor():
-        pass
-
-    def callStat():
         pass
 
     def condition():
@@ -360,52 +564,19 @@ class Parser(Lex):
     def factor():
         pass
 
-    def forcaseStat():
-        pass
-
-    def formalparitem():
-        pass
-
     def idtail():
         pass
     
-    def incaseStat():
-        pass
-
-    def inputStat():
-        pass
-
     def muloperator():
         pass
 
     def optionalsign():
         pass
 
-    def printStat():
-        pass
-
     def reloperator():
         pass
 
-    def returnStat():
-        pass
-
-    def statement():
-        pass
-
-    def statements():
-        pass
-
-    def subprogram():
-        pass
-
-    def switchcaseStat():
-        pass
-
     def term():
-        pass
-
-    def whileStat():
         pass
 
 keywords=['program','declare','if','else','while','switchcase','forcase','incase','case','default','not','and','or','function',
