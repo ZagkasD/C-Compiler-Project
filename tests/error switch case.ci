@@ -1,0 +1,21 @@
+program errorswitchcase
+{
+declare x, sum; 
+# main #
+input(x);
+sum :=0;
+switchcase
+case(x>0)
+
+#error #
+
+{
+
+}
+
+
+
+
+default
+print(sum);
+}.

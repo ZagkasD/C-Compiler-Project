@@ -1,0 +1,13 @@
+program errorFunctionName
+{
+declare x;
+
+#error keyword as function name#
+function if(in x)
+{
+
+}
+# main #
+input(x);
+
+}.

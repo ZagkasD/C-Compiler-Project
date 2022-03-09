@@ -1,0 +1,15 @@
+program errorexpresion
+
+{
+declare x, sum; 
+# main #
+input(x);
+
+#EXPRESION ERROR#
+x := (x-1 - * 3)
+
+
+
+
+
+}.

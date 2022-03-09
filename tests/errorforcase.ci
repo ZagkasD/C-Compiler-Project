@@ -1,0 +1,19 @@
+program errorforcase
+{
+declare x, sum; 
+# main #
+input(x);
+sum :=0;
+
+#error forcase missing#
+
+case(x>0)
+{
+sum := sum+x;
+x := x-1
+}
+
+
+default
+print(sum);
+}.
