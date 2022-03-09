@@ -11,7 +11,7 @@ class Token:
         self._line_number = line_number
     
     def __str__(self):
-        return (self._recognized_string+' \tfamily:"'+self._family+'", line:'+str(self._line_number))
+        return (self._recognized_string+' \tfamily:"'+str(self._family)+'", line:'+str(self._line_number))
 
 # Each token (word/character) fits into one of these categories
 class Family: 
@@ -691,11 +691,11 @@ def main(input_file):
     
     # Place the above two lines of code in commas and remove the commas from the following six lines
     # to run the lexical analyzer on it's own.
-    #l = Lex(input_file)
-    #k = Token()
+    # l = Lex(input_file)
+    # k = Token()
     # k = l.next_token()
-    # while k != None:
-    #     print(k)
-    #     k = l.next_token() 
+    # while k._recognized_string != 'End Of File':
+    #      print(k)
+    #      k = l.next_token() 
 main(sys.argv[1])
 #main()
