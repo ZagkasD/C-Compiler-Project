@@ -1,0 +1,12 @@
+program errorstatment
+
+{
+declare x, sum; 
+# main #
+input(x);
+
+#statment ERROR#
+x := x-1 
+sum := 0;
+
+}.

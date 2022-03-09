@@ -1,0 +1,18 @@
+program errorcondition
+
+{
+declare x, count;
+# main #
+
+
+input(x);
+
+count := 0;
+#error condition#
+while (x>0 and x>3 or x<4)
+{
+x := x/10;
+count := count+1;
+};
+print(count);
+}.
