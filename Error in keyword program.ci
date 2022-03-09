@@ -1,10 +1,11 @@
-program prime
+programs prime
 {
 	# declarations for main #
 	declare i;
 
 	function isPrimes(in x)
 	{
+		# declarations for isPrime #
 		declare i;
 	
 		function divides(in x, in y)
@@ -16,6 +17,7 @@ program prime
 				return (0);
 		}
 		
+		# body of isPrime #
 		i:=2;
 		while (i<x)
 		{

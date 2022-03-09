@@ -1,6 +1,6 @@
 program prime
 {
-	# declarations for main #
+	# declarations for main 
 	declare i;
 
 	function isPrimes(in x)

@@ -5,6 +5,7 @@ program prime
 
 	function isPrimes(in x)
 	{
+		# declarations for isPrime #
 		declare i;
 	
 		function divides(in x, in y)
@@ -16,6 +17,7 @@ program prime
 				return (0);
 		}
 		
+		# body of isPrime #
 		i:=2;
 		while (i<x)
 		{
@@ -26,7 +28,7 @@ program prime
 		return(1)
 	}
 	
-	# body of main #
+	# body of main 
 	i := 2;
 	while (i<=30)
 		if (isPrime(in i)=1)

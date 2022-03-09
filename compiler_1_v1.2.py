@@ -3,6 +3,7 @@
 
 import sys
 
+# Tokens = words (or characters) from the input file 
 class Token:
     def __init__(self,family=None,recognized_string=None,line_number=None):
         self._family = family
@@ -10,9 +11,9 @@ class Token:
         self._line_number = line_number
     
     def __str__(self):
-        return (self._recognized_string+' \tfamily:"'+self._family+'", line:'+str(self._line_number))
+        return (self._recognized_string+' \tfamily:"'+str(self._family)+'", line:'+str(self._line_number))
 
-  
+# Each token (word/character) fits into one of these categories
 class Family: 
 
 	number      = 'number'	
@@ -38,7 +39,7 @@ class Family:
 	# end_of_file = 9 
 	
 
-
+# Class responsible for breaking the input file into tokens
 class Lex(Token):
     def __init__(self,input_file=None,file_name=None,token:Token = None,family=None,recognized_string=None,line_number=1):
         super().__init__(family, recognized_string, line_number)
@@ -50,11 +51,11 @@ class Lex(Token):
         print('Destructor called. Lex object deleted.')
 
     def error(self,error_msg,line_number):
-#        print("Error in file:"+sys.argv[1]+' || line:'+str(line_number)+' || '+error_msg+' << '+token_string+' >>')
-        print("Error in file: testing.txt"+' || line: '+str(line_number)+' || '+error_msg)
+        print("Error in file:"+sys.argv[1]+' || line:'+str(line_number)+' || '+error_msg)
+        #print("Error in file: testing.txt"+' || line: '+str(line_number)+' || '+error_msg)
         exit(1)
 
-
+# Each time next_token is called, it returns the next token from the input file
     def next_token(self):
         while True:
             char = self._input_file.read(1)
@@ -222,6 +223,7 @@ class Lex(Token):
                 token_string = char
                 self.error('Illegal character << {0:s} >>.'.format(token_string),self._line_number)
 
+# Class responsible for checking the syntax of the input file
 class Parser(Lex):
     def __init__(self, family=None, recognized_string=None, line_number=None, file_name=None, token: Token = None, lexical_analyzer:Lex=None):
         super().__init__(family, recognized_string, line_number, file_name, token)
@@ -243,7 +245,8 @@ class Parser(Lex):
                 self.error('The name of the program expected, after the keyword << program >> in line << {0:d} >>. The illegal program name << {1:s} >> appeared.'.format(self._line_number,self._token._recognized_string), self._line_number)
         else:
             self.error('Keyword << program >> expected in line {0:d}. All programs should start with the keyword << program >>. Instead, the word << {1:s} >> appeared.'.format(self._line_number,self._token._recognized_string),self._line_number)
-    
+
+# Function responsible for initialing the syntax analyses 
     def syntax_analyzer(self):
         self.get_token()
         self.program()
@@ -311,7 +314,7 @@ class Parser(Lex):
 
     def subprograms(self):
         while self._token._recognized_string == 'function' or self._token._recognized_string == 'procedure':
-            # Don't consume token. Need it for subprogram
+            # Don't consume token. Need it for subprogram!!!
             self.subprogram()
     # It might be redundant to create two if statements for function and procedure
     # When they implement the same code
@@ -678,21 +681,21 @@ class Parser(Lex):
 keywords=['program','declare','if','else','while','switchcase','forcase','incase','case','default','not','and','or','function',
 		  'procedure','call','return','in', 'inout','input', 'print']
 
-#def main(input_file):
-def main():
-#    input_file = open(input_file,'r')
-    input_file = open('testing.txt','r')
+def main(input_file):
+#def main():
+    input_file = open(input_file,'r')
+    #input_file = open('testing.txt','r')
 
-    #l = Lex(input_file)
-    #k = Token()
-    p = Parser(input_file)
-    
+    p = Parser(input_file)    
     p.syntax_analyzer()
     
+    # Place the above two lines of code in commas and remove the commas from the following six lines
+    # to run the lexical analyzer on it's own.
+    # l = Lex(input_file)
+    # k = Token()
     # k = l.next_token()
-    # while k != None:
-    #     print(k)
-    #     k = l.next_token()
-
-#main(sys.argv[1])
-main()
+    # while k._recognized_string != 'End Of File':
+    #      print(k)
+    #      k = l.next_token() 
+main(sys.argv[1])
+#main()
