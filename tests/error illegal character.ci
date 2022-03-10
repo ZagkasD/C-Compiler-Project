@@ -1,7 +1,0 @@
-program erroridname
-{
- # declarations for main #
-declare i_;
-
-
-}.
