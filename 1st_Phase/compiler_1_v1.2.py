@@ -1,7 +1,7 @@
 # Zagkas Dimosthenis 4359 cse84359
 # Andreou Aggelos    4628 cse84628
 
-# Must be run with python3 command!!!
+# Must be run in python3
 
 import sys
 
@@ -302,6 +302,8 @@ class Parser(Lex):
             self.varlist()
             if self._token._recognized_string == ';':
                 self.get_token()
+            else:
+                self.error('Expected << ; >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
 
     def varlist(self):
         if self._token._family == 'id':
