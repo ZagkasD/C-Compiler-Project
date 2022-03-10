@@ -1,0 +1,11 @@
+program prime
+{
+	declare x;
+	
+	# checking boolfactor #
+	x := 0;
+	if (not [x = 1])
+	{
+			x := 2;
+	}	
+}.		
