@@ -1,0 +1,20 @@
+begin block
+end block
+halt
+:=
++/-
+
+*
+()
+and
+or
+not
+[]
+
+relop
+input
+print
+in
+out
+
+
