@@ -1,7 +1,0 @@
-program inputPrint
-{
-	declare x;
-
-	print (x);
-	input(x);
-}.
