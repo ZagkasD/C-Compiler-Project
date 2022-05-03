@@ -855,19 +855,19 @@ class CCodeGenerator(Parser):
                     self._c_code_file.write('int ' + c_variable_line[:-2] + ';' + '\n\n')
                     self._c_code_file.write('int main()\n{\n')  
             elif quad.op == 'halt':
-                self._c_code_file.write('\tL_' + str(quad.tag) + ': {}' +  '  //(' + str(quad.op) + ', ' + str(quad.arg1) + ', ' + str(
-                        quad.arg2) + ', ' + str(quad.res) + ')\n')
+                self._c_code_file.write('\tL_' + str(quad.label) + ': {}' +  '  //(' + str(quad.op) + ', ' + str(quad.arg1) + ', ' + str(
+                        quad.arg2) + ', ' + str(quad.dest) + ')\n')
             elif quad.op == 'end_block':
                 self._c_code_file.write('}')
             elif quad.op in arithmetic_operators:
                 self._c_code_file.write(
-                    '\tL_' + str(quad.tag) + ': ' + str(quad.res) + '=' + str(quad.arg1) + ' ' + str(quad.op) + ' ' + str(
+                    '\tL_' + str(quad.label) + ': ' + str(quad.dest) + '=' + str(quad.arg1) + ' ' + str(quad.op) + ' ' + str(
                         quad.arg2) + ';' + '  //(' + str(quad.op) + ', ' + str(quad.arg1) + ', ' + str(
-                        quad.arg2) + ', ' + str(quad.res) + ')\n')
+                        quad.arg2) + ', ' + str(quad.dest) + ')\n')
             elif quad.op == ':=':
                 self._c_code_file.write(
-                    '\tL_' + str(quad.tag) + ': ' + str(quad.res) + '=' + str(quad.arg1) + ';' + '  //(' + str(
-                        quad.op) + ', ' + str(quad.arg1) + ', ' + str(quad.arg2) + ', ' + str(quad.res) + ')\n')
+                    '\tL_' + str(quad.label) + ': ' + str(quad.dest) + '=' + str(quad.arg1) + ';' + '  //(' + str(
+                        quad.op) + ', ' + str(quad.arg1) + ', ' + str(quad.arg2) + ', ' + str(quad.dest) + ')\n')
             elif quad.op in relational_operators:
                 if quad.op == '=':
                     ci_relational_operator = '=='
@@ -875,25 +875,25 @@ class CCodeGenerator(Parser):
                     ci_relational_operator = '!='
                 else:
                     ci_relational_operator = quad.op
-                self._c_code_file.write('\tL_' + str(quad.tag) + ': ' + 'if (' + str(quad.arg1) + ci_relational_operator + str(
-                    quad.arg2) + ')' + ' goto L_' + str(quad.res) + ';' + '  //(' + str(quad.op) + ', ' + str(
-                    quad.arg1) + ', ' + str(quad.arg2) + ', ' + str(quad.res) + ')\n')
+                self._c_code_file.write('\tL_' + str(quad.label) + ': ' + 'if (' + str(quad.arg1) + ci_relational_operator + str(
+                    quad.arg2) + ')' + ' goto L_' + str(quad.dest) + ';' + '  //(' + str(quad.op) + ', ' + str(
+                    quad.arg1) + ', ' + str(quad.arg2) + ', ' + str(quad.dest) + ')\n')
             elif quad.op == 'jump':
                 self._c_code_file.write(
-                    '\tL_' + str(quad.tag) + ': ' + 'goto L_' + str(quad.res) + ';' + '  //(' + str(quad.op) + ', ' + str(
-                        quad.arg1) + ', ' + str(quad.arg2) + ', ' + str(quad.res) + ')\n')
+                    '\tL_' + str(quad.label) + ': ' + 'goto L_' + str(quad.dest) + ';' + '  //(' + str(quad.op) + ', ' + str(
+                        quad.arg1) + ', ' + str(quad.arg2) + ', ' + str(quad.dest) + ')\n')
             elif quad.op == 'inp':
                 self._c_code_file.write(
-                    '\tL_' + str(quad.tag) + ': ' + 'scanf(\"%d\"' + ', &' + str(quad.arg1) + ')' + ';' + '  //(' + str(
-                        quad.op) + ', ' + str(quad.arg1) + ', ' + str(quad.arg2) + ', ' + str(quad.res) + ')\n')
+                    '\tL_' + str(quad.label) + ': ' + 'scanf(\"%d\"' + ', &' + str(quad.arg1) + ')' + ';' + '  //(' + str(
+                        quad.op) + ', ' + str(quad.arg1) + ', ' + str(quad.arg2) + ', ' + str(quad.dest) + ')\n')
             elif quad.op == 'out':
                 self._c_code_file.write(
-                    '\tL_' + str(quad.tag) + ': ' + 'printf(\"''%d\\n\"' + ', ' + str(quad.arg1) + ')' + ';' + '  //(' + str(
-                        quad.op) + ', ' + str(quad.arg1) + ', ' + str(quad.arg2) + ', ' + str(quad.res) + ')\n')
+                    '\tL_' + str(quad.label) + ': ' + 'printf(\"''%d\\n\"' + ', ' + str(quad.arg1) + ')' + ';' + '  //(' + str(
+                        quad.op) + ', ' + str(quad.arg1) + ', ' + str(quad.arg2) + ', ' + str(quad.dest) + ')\n')
             elif quad.op == 'retv':
                 self._c_code_file.write(
-                    '\tL_' + str(quad.tag) + ': ' + 'return ' + str(quad.arg1) + ';' + '  //(' + str(
-                        quad.op) + ', ' + str(quad.arg1) + ', ' + str(quad.arg2) + ', ' + str(quad.res) + ')\n')
+                    '\tL_' + str(quad.label) + ': ' + 'return ' + str(quad.arg1) + ';' + '  //(' + str(
+                        quad.op) + ', ' + str(quad.arg1) + ', ' + str(quad.arg2) + ', ' + str(quad.dest) + ')\n')
             
 
 
