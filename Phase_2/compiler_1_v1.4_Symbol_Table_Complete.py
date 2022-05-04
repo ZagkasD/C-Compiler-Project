@@ -61,7 +61,8 @@ class Quad:
 
 # Class responsible for breaking the input file into tokens
 class Lex(Token):
-    def __init__(self,input_file=None,
+    def __init__(self,
+        input_file=None,
         file_name=None,
         token:Token = None,
         family=None,
@@ -78,7 +79,8 @@ class Lex(Token):
         
 
     def __del__(self):
-        print('Destructor called. Lex object deleted.')
+        # Destructors manually destroy an object
+        pass
 
     def error(self,error_msg,line_number):
         #print("Error in file:"+sys.argv[1]+' || line:'+str(line_number)+' || '+error_msg)
@@ -365,6 +367,7 @@ class Parser(Lex):
         self._ci_var_list = ci_var_list         # ci variables for production of c file         
         self._inter_code_file = inter_code_file
         self._symbol_table_file = symbol_table_file
+        self._file_name = file_name
 
     #===========================================#
     #           Symbol Table Methods            #
@@ -510,8 +513,8 @@ class Parser(Lex):
             if self._quads_list[i].label in label_list:
                 self._quads_list[i].dest = dest
 
-    def inter_code_file_gen(self):
-        self._inter_code_file = open('test.int','w')
+    def inter_code_file_gen(self,input_file_name):
+        self._inter_code_file = open(input_file_name[:-2] + 'int','w')
         for quad in self._quads_list:
             self._inter_code_file.write(quad.__str__())
         self._inter_code_file.close()
@@ -926,7 +929,7 @@ class Parser(Lex):
         if self._token._recognized_string == '(':
             self.get_token()
             out=self.expression()
-            self.genQuad('out',out,'','_')
+            self.genQuad('out',out,'_','_')
             if self._token._recognized_string == ')':
                 self.get_token()
             else:
@@ -940,7 +943,7 @@ class Parser(Lex):
             if self._token._family == 'id':
                 if self.search_entry(self._token._recognized_string) is None:
                     self.error('Undefined variable id: << %s >>.' %self._token._recognized_string, self._line_number)
-                self.genQuad('inp',self._token._recognized_string,'','_')
+                self.genQuad('inp',self._token._recognized_string,'_','_')
                 self._ci_var_list.append(self._token._recognized_string)
                 self.get_token()
                 if self._token._recognized_string == ')':
@@ -1173,26 +1176,29 @@ class CCodeGenerator(Parser):
 
 def main(input_file):
 #def main():
+
+    input_file_name = input_file
     input_file = open(input_file,'r')
     #input_file = open('testing.ci','r')
-    
     parser = Parser(input_file) 
-    parser._symbol_table_file = open('test.symb','w')
+    parser._symbol_table_file = open(input_file_name[:-2] + 'symb','w')
 
     # Initiate syntax analysis
     parser.syntax_analyzer()
 
-    parser.inter_code_file_gen()
+    parser.inter_code_file_gen(input_file_name)
     parser._symbol_table_file.close()
 
     if parser._subprogram_flag == False:
         print('C-imple file has no subprograms. Generating C file...')
         c_generator = CCodeGenerator()
-        c_generator._c_code_file = open('test.c', 'w')
+        c_generator._c_code_file = open(input_file_name[:-2] + 'c', 'w')
         c_generator.generate_code()
         c_generator._c_code_file.close()
     else:
         print('C-imple file has subprograms. C file generation aborted...')
+
+    input_file.close()
 
 main(sys.argv[1])
 #main()
