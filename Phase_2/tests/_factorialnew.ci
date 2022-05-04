@@ -6,6 +6,7 @@ program factorial {
 
      declare x;
      declare i,fact;
+     declare a,v,y;
      
      a := 12;
      v := 42;

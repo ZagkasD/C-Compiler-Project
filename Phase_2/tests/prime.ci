@@ -30,8 +30,9 @@ program prime
 	
 	# body of main #
 	i := 2;
-	while (i<=30)
+	while (i<=30){
 	    isPrivesVar := isPrimes(in i);
 		if (isPrivesVar=1)
 			print(i);;
+    }
 }.		

@@ -80,7 +80,9 @@ class Lex(Token):
         
 
     def __del__(self):
-        print('Destructor called. Lex object deleted.')
+        # Destructors manually destroy an object
+        #print('Destructor called. Lex object deleted.')
+        pass
 
     def error(self,error_msg,line_number):
         #print("Error in file:"+sys.argv[1]+' || line:'+str(line_number)+' || '+error_msg)
@@ -335,7 +337,7 @@ class Parser(Lex):
                self._quads_list[i].dest = dest
 
     def inter_code_file_gen(self):
-        self._inter_code_file = open('test.symb','w')
+        self._inter_code_file = open('test.int','w')
         for quad in self._quads_list:
             self._inter_code_file.write(quad.__str__())
         self._inter_code_file.close()
@@ -974,5 +976,6 @@ def main(input_file):
     else:
         print('C-imple file has subprograms. C file generation aborted...')
 
+    input_file.close()
 main(sys.argv[1])
 #main()
