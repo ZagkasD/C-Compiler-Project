@@ -4,7 +4,6 @@
 
 # Must be run in python3
 
-from abc import ABC
 import sys
 
 
@@ -943,10 +942,10 @@ class CCodeGenerator(Parser):
                     '\tL_' + str(quad.label) + ': ' + 'return ' + str(quad.arg1) + ';' + '  //(' + str(
                         quad.op) + ', ' + str(quad.arg1) + ', ' + str(quad.arg2) + ', ' + str(quad.dest) + ')\n')
 
-#def main(input_file):
-def main():
-    #input_file = open(input_file,'r')
-    input_file = open('testing.ci','r')
+def main(input_file):
+#def main():
+    input_file = open(input_file,'r')
+    #input_file = open('testing.ci','r')
 
     # Initiate syntax analysis
     parser = Parser(input_file)    
@@ -961,5 +960,5 @@ def main():
     else:
         print('C-imple file has subprograms. C file generation aborted...')
 
-#main(sys.argv[1])
-main()
+main(sys.argv[1])
+#main()
