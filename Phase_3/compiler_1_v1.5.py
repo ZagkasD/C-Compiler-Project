@@ -55,6 +55,12 @@ class Quad:
             return str(self.label) + ': ' + str(self.op) + ' ' + str(self.arg1) + ' ' + str(self.arg2) + ' ' + str(
             self.dest) + '\n'
 
+
+
+
+
+
+
 #===============================#
 #       Lexical Analyzer        #
 #===============================#
@@ -257,6 +263,15 @@ class Lex(Token):
                 self.error('Illegal character << {0:s} >>.'.format(token_string),self._line_number)
 
 
+
+
+
+
+
+
+
+
+
 #===============================#
 #     Symbol Table Classes      #
 #===============================#  
@@ -326,6 +341,16 @@ class SymbolicConstant():
         self._value = value
 
 
+
+
+
+
+
+
+
+
+
+
 #===============================#
 #        Syntax Analyzer        #
 #===============================#
@@ -370,6 +395,15 @@ class Parser(Lex):
         self._symbol_table_file = symbol_table_file
         self._file_name = file_name
         self._assembly_file = assembly_file     # asm file for assembly in riskV
+
+
+
+
+
+
+
+
+
 
     #===========================================#
     #           Symbol Table Methods            #
@@ -441,14 +475,14 @@ class Parser(Lex):
         self._scopes_list[-2]._entities_list[-1]._formalParameters.append(FormalParameter(par_name, mode, 'Argument'))
 
     # Search information at the symbol table, starting from the highest scope
-    def search_entry(self,entry_name):
+    def search_entity(self,entity_name):
         if not self._scopes_list:
             # if scopes_list is empty
             return
         for scope in self._scopes_list:
-            for entry in scope._entities_list:
-                if entry._name == entry_name:
-                    return entry
+            for entity in scope._entities_list:
+                if entity._name == entity_name:
+                    return entity
 
     def print_symbol_table(self):
             self._symbol_table_file.write('\nSymbol Table:\n')
@@ -475,6 +509,14 @@ class Parser(Lex):
                         self._symbol_table_file.write(' <Arguments: None>')
                 self._symbol_table_file.write('\n')
             self._symbol_table_file.write('\n===================================================================================================================================================\n')
+
+
+
+
+
+
+
+
 
 
     #===========================================#
@@ -521,6 +563,12 @@ class Parser(Lex):
             self._inter_code_file.write(quad.__str__())
         self._inter_code_file.close()
             
+
+
+
+
+
+
     #===========================================#
     #             Final Code Methods            #
     #===========================================#
@@ -533,16 +581,73 @@ class Parser(Lex):
                 if entity_name == entity._name:
                     return scope._nesting_level
 
+    # Creates assembly code for transferring the ADDRESS of a non local entity into $t0
     def gnlvcode(variable):
         pass
 
-    def loadvr(variable, register):
-        pass
+    # Creates assembly code for transferring entity from memory to register 
+    def loadvr(self,variable, register_number):
+        # li is being translated from the assign (:=) command
+        if isinstance(variable,int):
+            self._assembly_file.write("li t%s, %s\n",register_number,variable)
+        else:
+            # Retrieve the entity
+            # The entity can be on a different nesting level (scope) from the local one (the last one)
+            # We need to check that
+            entity = self._search_entity(variable)
+            
+            # Local var or par with value or temp var
+            # Massive if, need to check a lot of things
+            # For Variable, need to check if it is variable and if the nesting level of the variable
+            # is the last nesting level. That is, if it is in the scope_list[-1].
 
+            # For Parameter, need to check the name, the nesting level and the input mode for cv
+
+            # For temp variable the name is good enough
+
+            if ((entity._type == 'Variable' and self._check_nesting_level(variable) == self._scopes_list[-1]._nesting_level)
+                 or (entity._type == 'Parameter' and self._check_nesting_level(variable) == self._scopes_list[-1]._nesting_level and entity._mode == 'cv')
+                 or (entity._type == "Tmp_Variable")):
+                self._assembly_file.write("lw t%s, -%d(sp)\n",register_number,entity._offset)
+            
+            # For Parameter in the same nesting level and input mode as reference
+            elif(entity._type == 'Parameter' and self._check_nesting_level(variable) == self._scopes_list[-1]._nesting_level and entity._mode == 'ref'):
+                self._assembly_file.write('lw $t0, -%d($sp)\n' % entity._offset)
+                self._assembly_file.write('lw $t%s, ($t0)\n' % register_number)
+            
+            # Local var or parameter with cv which belongs to a ancestor (nesting level smaller)
+            elif((entity._type == 'Variable' and self._check_nesting_level(variable) < self._scopes_list[-1]._nesting_level)
+                  or entity._type == 'Parameter' and self._check_nesting_level(variable) < self._scopes_list[-1]._nesting_level and entity._mode == 'cv'):
+                self.gnlvcode(variable)
+                self._assembly_file.write('lw $t%s, ($t0)\n' % register_number)
+
+            # Parameter with ref that belongs to an ancestor (smaller nesting level)
+            elif(entity._type == 'Parameter' and self._check_nesting_level(variable) < self._scopes_list[-1]._nesting_level and entity._mode == 'ref'):
+                self.gnlvcode(variable)
+                self._assembly_file.write('lw $t0, ($t0)\n')
+                self._assembly_file.write('lw $t%s, ($t0)\n' % register_number)
+
+            # Global variable. Not using the gnlvcode method to reach the main program because for 
+            # deep nesting level that would have high cost. That's why we are using a specific pointer
+            # to the main program. 
+            elif(entity._type == 'Variable' and self._check_nesting_level(variable) == 0): # nesting level = 0 because it's the main program
+                self._assembly_file.write('lw $t%s, -%d($gp)\n', register_number, entity._offset)
+
+            else:
+                self.error("Error with the loadvr method in the generation of the assembly file.",0)
+
+    # Opposite of loadvr. Creates assembly code for storing the data of the register to the memory
     def storerv(register, variable):
         pass
 
     
+
+    #===========================================#
+    #            Final Code Generator            #
+    #===========================================#
+
+
+
     #===========================================#
     #         Syntax Analyzer Methods           #
     #===========================================#
@@ -778,7 +883,7 @@ class Parser(Lex):
     def statement(self):
         if self._token._family == 'id':
             dest_var = self._token._recognized_string # dest variable of assign statement
-            if self.search_entry(dest_var) is None:
+            if self.search_entity(dest_var) is None:
                 self.error('Undefined variable id: << %s >>.' %dest_var, self._line_number)
             self._ci_var_list.append(self._token._recognized_string)
             self.get_token()
@@ -931,7 +1036,7 @@ class Parser(Lex):
     def callStat(self):
         if self._token._family == 'id':
             proc_name = self._token._recognized_string            
-            if self.search_entry(self._token._recognized_string) is None:
+            if self.search_entity(self._token._recognized_string) is None:
                 self.error('Undefined variable id: << %s >>.' %self._token._recognized_string, self._line_number)
             self.get_token()
             if self._token._recognized_string == '(':
@@ -963,7 +1068,7 @@ class Parser(Lex):
         if self._token._recognized_string == '(':
             self.get_token()
             if self._token._family == 'id':
-                if self.search_entry(self._token._recognized_string) is None:
+                if self.search_entity(self._token._recognized_string) is None:
                     self.error('Undefined variable id: << %s >>.' %self._token._recognized_string, self._line_number)
                 self.genQuad('inp',self._token._recognized_string,'_','_')
                 self._ci_var_list.append(self._token._recognized_string)
@@ -991,7 +1096,7 @@ class Parser(Lex):
         elif self._token._recognized_string == 'inout':
             self.get_token()
             if self._token._family == 'id':
-                if self.search_entry(self._token._recognized_string) is None:
+                if self.search_entity(self._token._recognized_string) is None:
                     self.error('Undefined variable id: << %s >>.' %self._token._recognized_string, self._line_number)
                 self.genQuad('par',self._token._recognized_string,'ref','_')
                 self.get_token()
@@ -1078,7 +1183,7 @@ class Parser(Lex):
                 self.error('Expected << ) >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
         elif self._token._family == 'id':
             arg_1 = self._token._recognized_string
-            if self.search_entry(self._token._recognized_string) is None:
+            if self.search_entity(self._token._recognized_string) is None:
                 self.error('Undefined variable id: << %s >>.' %self._token._recognized_string, self._line_number)
             self.get_token()
             id_list = self.idtail()
@@ -1196,12 +1301,15 @@ class CCodeGenerator(Parser):
                         quad.op) + ', ' + str(quad.arg1) + ', ' + str(quad.arg2) + ', ' + str(quad.dest) + ')\n')
 
 
-def main(input_file):
-#def main():
+#def main(input_file):
+def main():
 
-    input_file_name = input_file    # will be used to create the .int, .c, .asm, files with the same name as the input file
-    input_file = open(input_file,'r')
-    #input_file = open('testing.ci','r')
+    #input_file_name = input_file    # will be used to create the .int, .c, .asm, files with the same name as the input file
+    #input_file = open(input_file,'r')
+    
+    input_file_name = "testing.ci"
+    input_file = open('testing.ci','r')
+
     parser = Parser(input_file) 
     parser._symbol_table_file = open(input_file_name[:-2] + 'symb','w') # create a new symb file with the same name as the input file
     parser._assembly_file = open(input_file_name[:-2] + 'asm', 'w') # create a new asm file with the same name as the input file
@@ -1223,5 +1331,5 @@ def main(input_file):
 
     input_file.close()
 
-main(sys.argv[1])
-#main()
+#main(sys.argv[1])
+main()
