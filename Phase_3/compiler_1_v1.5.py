@@ -4,6 +4,7 @@
 # Must be run in python3
 
 import sys
+from tracemalloc import start
 
 
 # Tokens = words (or characters) from the input file 
@@ -50,7 +51,7 @@ class Quad:
         self.arg1 = arg1
         self.arg2 = arg2
         self.dest = dest
-
+    
     def __str__(self):
             return str(self.label) + ': ' + str(self.op) + ' ' + str(self.arg1) + ' ' + str(self.arg2) + ' ' + str(
             self.dest) + '\n'
@@ -459,15 +460,16 @@ class Parser(Lex):
     
     # Update startingQuad which was not available at creation
     def update_startingQuad(self,program_name):
-        startQuad = self.nextquad() # next quad will be the block quad, aka the start of the code
+        starting_quad = self.nextquad() # next quad will be the block quad, aka the start of the code
         if program_name == self._main_program_name:
             # This is to check if the only block is the main program block
             # There is no need for an actual starting quad because the main block
             # Will not be called from somewhere else
             # Thats why we manually set it
-            self._main_program_starting_quad = startQuad
-            return
-        self._scopes_list[-2]._entities_list[-1]._startingQuad = startQuad
+            self._main_program_starting_quad = starting_quad
+            return starting_quad
+        self._scopes_list[-2]._entities_list[-1]._startingQuad = starting_quad
+        return starting_quad
 
     # Works like update_fields. It updates formal parameters for functions/procedures
     def add_formal_param(self,par_name, mode):
@@ -642,9 +644,17 @@ class Parser(Lex):
 
     
 
+
+
     #===========================================#
     #            Final Code Generator            #
     #===========================================#
+
+    def final_code_generator(quad,program_name):
+        pass
+
+
+
 
 
 
@@ -685,20 +695,39 @@ class Parser(Lex):
             self.get_token()
             self.declarations()
             self.subprograms()
-            self.update_startingQuad(program_name)
+
+            starting_quad = self.update_startingQuad(program_name)
+           
             # This self.genQuad will be executed AFTER all the functions
             # That is because subprograms is been executed first
             self.genQuad("begin_block", program_name, "_", "_")
             self.blockstatements()
+            
+            # Ending the program
             if program_name is self._main_program_name:
                 self.genQuad("halt", "_", "_", "_")
             self.genQuad("end_block", program_name, "_", "_") # end block
 
+            # Setting the framelength of a function. A new function will exist in the [-2] scope
+            # but its parameters and declarations will be in the [-1] scope
+            # The main program is an exception because when we set its framelength,
+            # there is no other scope other than the last one.
             if program_name is self._main_program_name:
                 self._main_program_framelength = self._scopes_list[-1]._offset
             else:
                 self._scopes_list[-2]._entities_list[-1]._framelength = self._scopes_list[-1]._offset
+
+            # Print the symbol table before deleting the scope of the completed function
             self.print_symbol_table()
+
+            # Update the assembly file 
+            # Program name is necessary to determine if we are at the main program 
+            # Need to give a starting object in quads list to work.
+            # Tried it with giving 0 but doesn't work.
+            for quad in self._quads_list[starting_quad:]:
+                self.final_code_generator(quad,program_name)
+
+            # Remove scope after printing the symbol table and updating the the assembly file
             self.remove_scope()
 
             if self._token._recognized_string == '}':
