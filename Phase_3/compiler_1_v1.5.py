@@ -4,8 +4,6 @@
 # Must be run in python3
 
 import sys
-from tracemalloc import start
-
 
 # Tokens = words (or characters) from the input file 
 class Token:
@@ -584,8 +582,19 @@ class Parser(Lex):
                     return scope._nesting_level
 
     # Creates assembly code for transferring the ADDRESS of a non local entity into $t0
-    def gnlvcode(variable):
-        pass
+    def gnlvcode(self,variable):
+        #search at symbol table for the non local variable
+        foreign_entity= self.search_entry(variable) #TODO emfanish la8oys an den bre8ei to onoma ths metablhths
+        #search for the scope level the variable is at
+        scope_levels=self._scopes_list[-1]._nesting_level - self.check_nesting_level(foreign_entity._name)
+       #point to parent
+        self._assembly_file.write(' lw $t0, -4($sp)\n')
+        while scope_levels>0:
+            #for every ancestor
+            self._assembly_file.write(' lw $t0, -4($sp)\n')
+            scope_levels-=1
+        self._assembly_file.write(' addi $t0, $t0, %d \n'% foreign_entity._offset)
+
 
     # Creates assembly code for transferring entity from memory to register 
     def loadvr(self,variable, register_number):
@@ -638,9 +647,32 @@ class Parser(Lex):
             else:
                 self.error("Error with the loadvr method in the generation of the assembly file.",0)
 
+
     # Opposite of loadvr. Creates assembly code for storing the data of the register to the memory
-    def storerv(register, variable):
-        pass
+    def storerv(self,register, variable):
+        #the entity for storing to the register
+        entity= self.search_entry(variable)
+        #1.2.3.5 global variable
+        if (entity._datatype=='Variable' and self.check_nesting_level(entity._name)==0):
+            self._assembly_file.write(' sw $t%s, -%d($s0)\n' % (register, entity._offset))
+        #1.2.3.1 local/temp variable or standard parameter with value
+        elif (entity._datatype=='Variable' and self.check_nesting_level(entity._name)==self.scopes_list[-1]._nesting_level) or (entity._datatype=='Parameter' and self.check_nesting_level(entity._name)==self.scopes_list[-1]._nesting_level and entity._mode=='in') or (entity._datatype=='Tmp_Variable'):
+            self._assembly_file.write(' sw $t%s, -%d($s0)\n' % (register, entity._offset))
+        #1.2.3.2  parameter passed with reference
+        elif (entity._datatype=='Parameter' and self.check_nesting_level(entity._name)==self.scopes_list[-1]._nesting_level and entity._mode=='inout'):
+            self._assembly_file.write(' lw $t0, -%d($sp)\n' % entity._offset)
+            self._assembly_file.write(' sw $t%s, 0($t0)\n' % register)
+##@#1.2.3.3 local var, ancestor parameter check again
+        elif (entity._datatype=='Variable' and self.check_nesting_level(entity._name)<self.scopes_list[-1]._nesting_level)or ( entity._datatype=='Parameter' and self.check_nesting_level(entity._name)<self.scopes_list[-1]._nesting_level and entity._mode=='in'):
+            self.gnlvcode(entity)
+            self._assembly_file.write(' sw $t%s, ($t0)\n' % register)
+        ##1.2.3.4 parameter from ancestor
+        elif (entity._datatype=='Parameter' and self.check_nesting_level(entity._name)<self.scopes_list[-1]._nesting_level and entity._mode=='inout'):
+            self.gnlvcode(entity)
+            self._assembly_file.write(' lw $t0, ($t0)\n')
+            self._assembly_file.write(' sw $t%s, ($t0)\n' % register)
+        #elif sta8era
+        #else error
 
     
 
