@@ -673,7 +673,7 @@ class Parser(Lex):
             self._assembly_file.write('sw $t%s, ($t0)\n' % register_number)
         #elif sta8era
         else:
-            self.error('Error with the loadvr method in the generation of the assembly file.Entity not recognised')
+            self.error('Error with the loadvr method in the generation of the assembly file.Entity not recognised',0)
 
     
 
