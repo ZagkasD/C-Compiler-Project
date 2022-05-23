@@ -584,7 +584,8 @@ class Parser(Lex):
     # Creates assembly code for transferring the ADDRESS of a non local entity into $t0
     def gnlvcode(self,variable):
         #search at symbol table for the non local variable
-        foreign_entity= self._search_entry(variable) #TODO emfanish la8oys an den bre8ei to onoma ths metablhths
+        foreign_entity= self._search_entity(variable) #TODO emfanish la8oys an den bre8ei to onoma ths metablhths
+        
         #search for the scope level the variable is at
         scope_levels=self._scopes_list[-1]._nesting_level - self._check_nesting_level(foreign_entity._name)
        #point to parent
@@ -651,7 +652,7 @@ class Parser(Lex):
     # Opposite of loadvr. Creates assembly code for storing the data of the register to the memory
     def storerv(self,register_number, variable):
         #the entity for storing to the register
-        entity= self._search_entry(variable)
+        entity= self._search_entity(variable)
         #1.2.3.5 global variable
         if (entity._datatype=='Variable' and self._check_nesting_level(entity._name)==0):# nesting level = 0 because it's the main program
             self._assembly_file.write('sw $t%s, -%d($s0)\n' % (register_number, entity._offset))
