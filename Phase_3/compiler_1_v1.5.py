@@ -1,8 +1,9 @@
 # Zagkas  Dimosthenis 4359 cse84359
 # Andreou Aggelos     4628 cse84628
 
-# Must be run in python3
+# Must be run in python3 
 
+from sqlite3 import paramstyle
 import sys
 
 # Tokens = words (or characters) from the input file 
@@ -294,7 +295,7 @@ class Entity():
 class Variable(Entity):
     def __init__(self, name=None, offset = 0, datatype = None):
         super().__init__(name)
-        self._offset = offset     # Distace from start of activation record
+        self._offset = offset     # Distance from start of activation record
         self._datatype = datatype 
 
 class FormalParameter(Entity):
@@ -312,7 +313,7 @@ class Parameter():
 
 class TemporaryVariable(Entity):
     # Cant have Variable as parent class because isinstance method in
-    # print_sumbol_table wont work. Read isinstance() for info
+    # print_symbol_table wont work. Read isinstance() for info
     def __init__(self, name=None, datatype=None, offset=0):
         super().__init__(name)
         self._datatype = datatype
@@ -375,7 +376,9 @@ class Parser(Lex):
         ci_var_list = list(),
         inter_code_file = None,
         symbol_table_file = None,
-        assembly_file = None):
+        assembly_file = None,
+        enter_in_main = False,
+        pars_list = list()):
 
         super().__init__(family,recognized_string,line_number,file_name,token)
 
@@ -394,6 +397,8 @@ class Parser(Lex):
         self._symbol_table_file = symbol_table_file
         self._file_name = file_name
         self._assembly_file = assembly_file     # asm file for assembly in riskV
+        self._enter_in_main = enter_in_main     # Used as a flag in the assembly file generator
+        self._pars_list = pars_list             # list of parameters for assembly file
 
 
 
@@ -483,6 +488,7 @@ class Parser(Lex):
             for entity in scope._entities_list:
                 if entity._name == entity_name:
                     return entity
+
 
     def print_symbol_table(self):
             self._symbol_table_file.write('\nSymbol Table:\n')
@@ -577,37 +583,35 @@ class Parser(Lex):
         if not self._scopes_list:  # scopes list is empty 
             return                 
         for scope in self._scopes_list:
-            for entity in self._scopes_list._entities_list:
+            for entity in scope._entities_list:
                 if entity_name == entity._name:
                     return scope._nesting_level
 
-                  
     # Creates assembly code for transferring the ADDRESS of a non local entity into $t0
     def gnlvcode(self,variable):
         #search at symbol table for the non local variable
-        foreign_entity= self._search_entity(variable) #TODO emfanish la8oys an den bre8ei to onoma ths metablhths
-        
+        foreign_entity= self._search_entity(variable)
         #search for the scope level the variable is at
-        scope_levels=self._scopes_list[-1]._nesting_level - self._check_nesting_level(foreign_entity._name)
-       #point to parent
-        self._assembly_file.write('lw $t0, -4($sp)\n')
+        scope_levels=self._scopes_list[-1]._nesting_level - self.check_nesting_level(foreign_entity._name)
+        #point to parent
+        self._assembly_file.write('  lw $t0, -4($sp)\n')
         while scope_levels>0:
             #for every ancestor
-            self._assembly_file.write('lw $t0, -4($sp)\n')
+            self._assembly_file.write('  lw $t0, -4($sp)\n')
             scope_levels-=1
-        self._assembly_file.write('addi $t0, $t0, %d \n'% foreign_entity._offset)
+        self._assembly_file.write('  addi $t0, $t0, %d \n'% foreign_entity._offset)
 
 
     # Creates assembly code for transferring entity from memory to register 
     def loadvr(self,variable, register_number):
         # li is being translated from the assign (:=) command
         if isinstance(variable,int):
-            self._assembly_file.write("li t%s, %s\n",register_number,variable)
+            self._assembly_file.write("  li t%s, %s\n",register_number,variable)
         else:
             # Retrieve the entity
             # The entity can be on a different nesting level (scope) from the local one (the last one)
             # We need to check that
-            entity = self._search_entity(variable)
+            entity = self.search_entity(variable)
             
             # Local var or par with value or temp var
             # Massive if, need to check a lot of things
@@ -618,79 +622,270 @@ class Parser(Lex):
 
             # For temp variable the name is good enough
 
-            if ((entity._type == 'Variable' and self._check_nesting_level(variable) == self._scopes_list[-1]._nesting_level)
-                 or (entity._type == 'Parameter' and self._check_nesting_level(variable) == self._scopes_list[-1]._nesting_level and entity._mode == 'cv')
-                 or (entity._type == "Tmp_Variable")):
-                self._assembly_file.write("lw t%s, -%d(sp)\n",register_number,entity._offset)
+            if ((entity._datatype == 'Variable' and self.check_nesting_level(variable) == self._scopes_list[-1]._nesting_level)
+                 or (entity._datatype == 'Parameter' and self.check_nesting_level(variable) == self._scopes_list[-1]._nesting_level and entity._mode == 'cv')
+                 or (entity._datatype == "Tmp_Variable")):
+                self._assembly_file.write("  lw t%s, -%d(sp)\n",register_number,entity._offset)
             
             # For Parameter in the same nesting level and input mode as reference
-            elif(entity._type == 'Parameter' and self._check_nesting_level(variable) == self._scopes_list[-1]._nesting_level and entity._mode == 'ref'):
-                self._assembly_file.write('lw $t0, -%d($sp)\n' % entity._offset)
-                self._assembly_file.write('lw $t%s, ($t0)\n' % register_number)
+            elif(entity._datatype == 'Parameter' and self.check_nesting_level(variable) == self._scopes_list[-1]._nesting_level and entity._mode == 'ref'):
+                self._assembly_file.write('  lw $t0, -%d($sp)\n' % entity._offset)
+                self._assembly_file.write('  lw $t%s, ($t0)\n' % register_number)
             
             # Local var or parameter with cv which belongs to a ancestor (nesting level smaller)
-            elif((entity._type == 'Variable' and self._check_nesting_level(variable) < self._scopes_list[-1]._nesting_level)
-                  or entity._type == 'Parameter' and self._check_nesting_level(variable) < self._scopes_list[-1]._nesting_level and entity._mode == 'cv'):
+            elif((entity._datatype == 'Variable' and self.check_nesting_level(variable) < self._scopes_list[-1]._nesting_level)
+                  or entity._datatype == 'Parameter' and self.check_nesting_level(variable) < self._scopes_list[-1]._nesting_level and entity._mode == 'cv'):
                 self.gnlvcode(variable)
-                self._assembly_file.write('lw $t%s, ($t0)\n' % register_number)
+                self._assembly_file.write('  lw $t%s, ($t0)\n' % register_number)
 
             # Parameter with ref that belongs to an ancestor (smaller nesting level)
-            elif(entity._type == 'Parameter' and self._check_nesting_level(variable) < self._scopes_list[-1]._nesting_level and entity._mode == 'ref'):
+            elif(entity._datatype == 'Parameter' and self.check_nesting_level(variable) < self._scopes_list[-1]._nesting_level and entity._mode == 'ref'):
                 self.gnlvcode(variable)
-                self._assembly_file.write('lw $t0, ($t0)\n')
-                self._assembly_file.write('lw $t%s, ($t0)\n' % register_number)
+                self._assembly_file.write('  lw $t0, ($t0)\n')
+                self._assembly_file.write('  lw $t%s, ($t0)\n' % register_number)
 
             # Global variable. Not using the gnlvcode method to reach the main program because for 
             # deep nesting level that would have high cost. That's why we are using a specific pointer
             # to the main program. 
-            elif(entity._type == 'Variable' and self._check_nesting_level(variable) == 0): # nesting level = 0 because it's the main program
-                self._assembly_file.write('lw $t%s, -%d($gp)\n', register_number, entity._offset)
+            elif(entity._datatype == 'Variable' and self.check_nesting_level(variable) == 0): # nesting level = 0 because it's the main program
+                self._assembly_file.write('  lw $t%s, -%d($gp)\n', register_number, entity._offset)
 
             else:
                 self.error("Error with the loadvr method in the generation of the assembly file.",0)
 
 
-    # Opposite of loadvr. Creates assembly code for storing the data of the register to the memory
+     # Opposite of loadvr. Creates assembly code for storing the data of the register to the memory
     def storerv(self,register_number, variable):
         #the entity for storing to the register
-        entity= self._search_entity(variable)
+        entity= self.search_entity(variable)
         #1.2.3.5 global variable
-        if (entity._datatype=='Variable' and self._check_nesting_level(entity._name)==0):# nesting level = 0 because it's the main program
-            self._assembly_file.write('sw $t%s, -%d($s0)\n' % (register_number, entity._offset))
+        if (entity._datatype=='Variable' and self.check_nesting_level(entity._name)==0):# nesting level = 0 because it's the main program
+            self._assembly_file.write(' sw $t%s, -%d($s0)\n' % (register_number, entity._offset))
         #1.2.3.1 local/temp variable or standard parameter with input mode value
-        elif (entity._datatype=='Variable' and self._check_nesting_level(entity._name)==self._scopes_list[-1]._nesting_level) or (entity._datatype=='Parameter' and self._check_nesting_level(entity._name)==self._scopes_list[-1]._nesting_level and entity._mode=='in') or (entity._datatype=='Tmp_Variable'):
-            self._assembly_file.write('sw $t%s, -%d($s0)\n' % (register_number, entity._offset))
+        elif (entity._datatype=='Variable' and self.check_nesting_level(entity._name)==self._scopes_list[-1]._nesting_level) or (entity._datatype=='Parameter' and self.check_nesting_level(entity._name)==self._scopes_list[-1]._nesting_level and entity._mode=='civ') or (entity._datatype=='Tmp_Variable'):
+            self._assembly_file.write(' sw $t%s, -%d($s0)\n' % (register_number, entity._offset))
         #1.2.3.2  parameter passed with reference
-        elif (entity._datatype=='Parameter' and self._check_nesting_level(entity._name)==self._scopes_list[-1]._nesting_level and entity._mode=='inout'):
-            self._assembly_file.write('lw $t0, -%d($sp)\n' % entity._offset)
-            self._assembly_file.write('sw $t%s, 0($t0)\n' % register_number)
+        elif (entity._datatype=='Parameter' and self.check_nesting_level(entity._name)==self._scopes_list[-1]._nesting_level and entity._mode=='ref'):
+            self._assembly_file.write(' lw $t0, -%d($sp)\n' % entity._offset)
+            self._assembly_file.write(' sw $t%s, 0($t0)\n' % register_number)
 ##@#1.2.3.3 local var, ancestor parameter with ref
-        elif (entity._datatype=='Variable' and self._check_nesting_level(entity._name)<self._scopes_list[-1]._nesting_level)or ( entity._datatype=='Parameter' and self._check_nesting_level(entity._name)<self._scopes_list[-1]._nesting_level and entity._mode=='in'):
+        elif (entity._datatype=='Variable' and self.check_nesting_level(entity._name)<self._scopes_list[-1]._nesting_level)or ( entity._datatype=='Parameter' and self.check_nesting_level(entity._name)<self._scopes_list[-1]._nesting_level and entity._mode=='civ'):
             self.gnlvcode(variable)
-            self._assembly_file.write('sw $t%s, ($t0)\n' % register_number)
+            self._assembly_file.write(' sw $t%s, ($t0)\n' % register_number)
         ##1.2.3.4 parameter with ref from ancestor
-        elif (entity._datatype=='Parameter' and self._check_nesting_level(entity._name)<self._scopes_list[-1]._nesting_level and entity._mode=='inout'):
+        elif (entity._datatype=='Parameter' and self.check_nesting_level(entity._name)<self._scopes_list[-1]._nesting_level and entity._mode=='ref'):
             self.gnlvcode(variable)
-            self._assembly_file.write('lw $t0, ($t0)\n')
-            self._assembly_file.write('sw $t%s, ($t0)\n' % register_number)
+            self._assembly_file.write(' lw $t0, ($t0)\n')
+            self._assembly_file.write(' sw $t%s, ($t0)\n' % register_number)
         #elif sta8era
         else:
-            self.error('Error with the storerv method in the generation of the assembly file.",0)
-
-
+            self.error('Error with the loadvr method in the generation of the assembly file.Entity not recognised',0)
     
 
 
 
     #===========================================#
-    #            Final Code Generator            #
+    #            Final Code Generator           #
     #===========================================#
 
-    def final_code_generator(quad,program_name):
-        pass
+    def final_code_generator(self,quad,block_name):
+        relational_operators = ['=', '<>', '<', '>', '<=', '>=']
+        cond_jump_fin_code= ['beq', 'bne', 'blt', 'bgt', 'ble', 'bge']
+        arithmetic_operators = ['+', '-', '*', '/']
+        ar_operators_fin_code=['add', 'sub', 'mul', 'div']
+        # At the start of the program the code needs to jump to the to the first command of the
+        # main program. Thus the first command needs to be a jump. The label of the first command
+        # of the main program is not yet known, but we can place a label before that command and
+        # jump to that label. The next command after the label will be the first command of the main program
+        if quad.label == 0: # first quad is quads_list
+            # We don't print the L0 label for them j main because
+            # that would ruin the label numbering fpr the rest of the labels
+            self._assembly_file.write("  j main\n")
+        
+        # Write the label
+        # For the main
+        # We want to print the main label only once, when we first enter the main
+        # That's why we need the flag, in order to not write the main label in
+        # recursive calls of the main program
+        if block_name == self._main_program_name and self._enter_in_main == False:
+            self._assembly_file.write("Lmain:\n")
+            self._assembly_file.write("  addi $sp, $sp, %d\n" % self._main_program_framelength)
+            self._assembly_file.write("  mv $gp, $sp\n")
+            self._enter_in_main = True
+        # For every other label
+        else: 
+            self._assembly_file.write("L_"+str(quad.label)+":\n")
+
+        # Assembly code for each block
+        if quad.op == 'begin_block':
+            # When we reach the main program we need to do two actions
+            # to initialize two registers, the sp and the gp for the global variables
+            # sp connects to the beginning of the stack which was given by the system for our program
+            # We need to place it at the beginning of the activation record of the main program
+            # Between the main program (global variables) and the point we call the main program
+            # all the other functions will be implemented. Thus we need to move the sp as many bytes
+            # as the activation record of the main program. That's where the gp will also be.
+
+            # Bug here. If we recursively call the program (ex, program fibonacci, calling function fibonacci)
+            # then we write in the assembly file two times the block for the main
+            # That is happening because the first time the compiler sees the quad of fibonacci
+            # it thinks that it is the main program, so it writes the proper commands in assembly
+            # After the function fibonacci has finished, the compiler sees the main program name again
+            # so it prints the same commands
+
+            #if block_name == self._main_program_name:
+            #    self._assembly_file.write("  addi $sp, $sp, %d\n" % self._main_program_framelength)
+            #    self._assembly_file.write("  mv $gp, $sp\n")
+            
+            # For every other function, we only need to store it's address to the ra register
+            # so when the function is completed, we do jump back to the point the function was called
+            if block_name != self._main_program_name:
+                self._assembly_file.write("  sw $ra, -0($sp)\n")
+        
+        elif quad.op == 'end_block':
+            # When a function is completed, we need to load the address of the command that
+            # called the function into the ra and then jump to it
+            if block_name != self._main_program_name:
+                self._assembly_file.write("  lw $ra, -0($sp)\n")
+                self._assembly_file.write("  jr $ra\n")
+        
+        # Halt means the main program has completed. We need to terminate the assembly file
+        elif quad.op == 'halt':
+            self._assembly_file.write("  li $a0, 0\n")
+            self._assembly_file.write("  li $a7, 93\n")
+            self._assembly_file.write("  ecall\n")
+        
+        #Jumps
+        if(quad.op=='jump'):
+            self._assembly_file.write(' j L_%d\n' %quad.dest)
+        elif (quad.op in relational_operators):
+            self.loadvr(quad.arg1, '1')
+            self.loadvr(quad.arg2, '2')
+            self._assembly_file.write('  %s $t1, $t2, L_%s\n' %(cond_jump_fin_code[relational_operators.index(quad.op)]),quad.dest)
+        
+        # Assignment
+        elif quad.op == ':=':
+            self.loadvr(quad.arg1, '0')     # load variable (arg1) into t0
+            self.storerv('0', quad.dest)    # move variable into the memory
+        
+        #Numeric Operations
+        elif quad.op in arithmetic_operators:
+            self.loadvr(quad.arg1, '1')
+            self.loadvr(quad.arg2, '2')
+            self._assembly_file.write(' %s $t1, $t2, $t1\n'% (ar_operators_fin_code[arithmetic_operators.index(quad.op)]))
+            self.storerv('1', quad.dest)
 
 
+        # Return value from function
+        elif quad.op == "retv":
+            self.loadvr(quad.arg1, '1')
+            self._assembly_file.write("  lw $t0, -8($sp)\n")
+            self._assembly_file.write("  sw $t1, ($t0)\n")
+        
+        # Input
+        elif quad.op == 'inp':
+            pass
+        
+        # Ouput
+        elif quad.op == 'out':
+            pass
 
+        # Parameter
+        elif quad.op == 'par':
+            if block_name == self._main_program_name:
+                # caller is main, nesting level is zero
+                caller_nesting_lvl = 0
+                framelength = self._main_program_framelength
+            else:
+                # if the caller is not the main program, we need to find it
+                # We also need the nesting level of this entity, that's why we created a new method
+                caller = self.search_entity(block_name)
+                caller_nesting_lvl = self.check_nesting_level(caller._name)
+                framelength = caller._framelength
+
+            # If the pars_list is empty 
+            if not self._pars_list:
+                # Before we pass in the first parameter, we need the fp to be at the stack 
+                # of the function that will be created
+                self._assembly_file.write('  addi $fp, $sp, %d\n' % framelength)
+            self._pars_list.append(quad)
+            # The offset of each parameter needs to be at the fourth+ place of the stack
+            par_offset = 12 + 4 * self._pars_list.index(quad)
+
+            # Parameter with value
+            if quad.arg2 == 'cv':
+                self.loadvr(quad.arg1, '0') # load the value of the parameter into $t0
+                # copy the value from the register to the proper place in the stack
+                self._assembly_file.write("  sw $t0, -%d($fp)" % par_offset)
+            
+            # Parameter with reference
+            elif quad.arg2 == 'ref':
+                variable = self.search_entity(quad.arg1)
+                var_nesting_lvl = self.check_nesting_level(quad.arg1)
+                # According to theory, if the caller function is in the same nesting level
+                # as the variable we are planning on passin as parameter, then we don't need
+                # to use gnvlcode to get the variable
+                if caller_nesting_lvl == var_nesting_lvl:
+                    if variable._datatype == 'Variable' or (variable._datatype == 'Parameter' and variable._mode == 'cv'):
+                        self._assembly_file.write("  addi $t0, $sp, -%d\n" %variable._offset)
+                        self._assembly_file.write("  sw $t0, -%d($fp)\n" %par_offset)    
+                    elif variable._datatype == 'Parameter' and variable._mode == 'ref':
+                        # Take the address of the variable
+                        self._assembly_file.write("  lw $t0, -%d($sp)\n" %variable._offset)
+                        # Place the address of the variable in the correct place in the stack of the new function
+                        self._assembly_file.write("  sw $t0, -%d($fp)\n" %par_offset)
+
+                # If the caller function is on a different nesting level from the variable
+                else:
+                    if variable._datatype == 'Variable' or (variable._datatype == 'Parameter' and variable._mode == 'cv'):
+                        # get the variable from the parents/main
+                        self.gnlvcode(quad.arg1)
+                        # Place the address of the variable in the correct place in the stack of the new function
+                        self._assembly_file.write("  sw $t0, -%d($fp)\n" %par_offset)
+                    elif variable._datatype == 'Parameter' and variable._mode == 'ref':
+                        # get the variable from the parents/main
+                        self.gnlvcode(quad.arg1)
+                        self._assembly_file.write("  lw $t0, ($t0)\n")
+                        # Place the address of the variable in the correct place in the stack of the new function
+                        self._assembly_file.write("  sw $t0, -%d($fp)\n" %par_offset)
+
+        #call
+        elif quad.op == 'call':
+            if block_name != self._main_program_name:
+                caller = self.search_entity(block_name)
+                caller_nesting_level = self._check_nesting_level(block_name)
+                framelength = caller.framelength
+            else:
+                caller_nesting_level = 0
+                framelength = self._main_program_framelength
+            to_call = self.search_entity(quad.dest)
+            to_call_nesting_level = self.check_nesting_level(quad.arg1)
+        
+            if self.actual_pars:
+                if self._actual_pars[-1].arg2 == 'RET':
+                    self._actual_pars.pop()
+                else:
+                    self._assembly_file.write('addi $fp, $sp, %d\n' % framelength)
+            #arguments check
+            if len(to_call.arguments_list) != len(self._actual_pars):
+                self.error('Subprogram \'%s\' arguments do not match definition' % to_call.name, -1, -1)
+                #TODO check
+            #IF the nesting level is the same The functions have the same parent 
+            if caller_nesting_level == to_call_nesting_level:
+                self._assembly_file.write(' lw $t0,-4($sp)\n' )
+                self._assembly_file.write(' sw $t0,-4($sp)\n' )
+            #IF the nesting level is the difrent The caller is to_call parent
+            else:
+                self._assembly_file.write(' sw $sp,-4($fp)\n' )
+            #move stack pointer to to_call
+            self._assembly_file.write(' addi $sp,$sp, %d\n' % framelength )
+            #call the function
+            #check again
+            self._assembly_file.write(' jal L_%d\n' % to_call.startQuad)
+
+            #get the stack pointer
+            self._assembly_file.write(' addi $sp, $sp, -%d\n' % framelength)
+            #check inside called function beginning sw ra,(sp) and at the end lw ra,(sp)  / jr ra
 
 
 
@@ -748,7 +943,7 @@ class Parser(Lex):
             # but its parameters and declarations will be in the [-1] scope
             # The main program is an exception because when we set its framelength,
             # there is no other scope other than the last one.
-            if program_name is self._main_program_name:
+            if program_name == self._main_program_name:
                 self._main_program_framelength = self._scopes_list[-1]._offset
             else:
                 self._scopes_list[-2]._entities_list[-1]._framelength = self._scopes_list[-1]._offset
@@ -762,6 +957,11 @@ class Parser(Lex):
             # Tried it with giving 0 but doesn't work.
             for quad in self._quads_list[starting_quad:]:
                 self.final_code_generator(quad,program_name)
+                # Halt = end of program. After halt there is the last quad of end block
+                # but that is empty, meaning we would create an empty label in the end of the assembly file
+                if quad.op == 'halt':
+                    break
+                #pass
 
             # Remove scope after printing the symbol table and updating the the assembly file
             self.remove_scope()
@@ -1384,6 +1584,7 @@ def main():
 
     parser.inter_code_file_gen(input_file_name)
     parser._symbol_table_file.close()
+    
 
     if parser._subprogram_flag == False:
         print('C-imple file has no subprograms. Generating C file...')
@@ -1394,8 +1595,9 @@ def main():
     else:
         print('C-imple file has subprograms. C file generation aborted...')
 
+
+    parser._assembly_file.close()
     input_file.close()
 
 #main(sys.argv[1])
 main()
-
