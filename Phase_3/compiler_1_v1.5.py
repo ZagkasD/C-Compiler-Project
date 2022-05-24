@@ -582,6 +582,7 @@ class Parser(Lex):
                 if entity_name == entity._name:
                     return scope._nesting_level
 
+                  
     # Creates assembly code for transferring the ADDRESS of a non local entity into $t0
     def gnlvcode(self,variable):
         #search at symbol table for the non local variable
@@ -648,6 +649,33 @@ class Parser(Lex):
             else:
                 self.error("Error with the loadvr method in the generation of the assembly file.",0)
 
+                
+    # Opposite of loadvr. Creates assembly code for storing the data of the register to the memory
+    def storerv(self,register_number, variable):
+        #the entity for storing to the register
+        entity= self._search_entity(variable)
+        #1.2.3.5 global variable
+        if (entity._datatype=='Variable' and self._check_nesting_level(entity._name)==0):# nesting level = 0 because it's the main program
+            self._assembly_file.write('sw $t%s, -%d($s0)\n' % (register_number, entity._offset))
+        #1.2.3.1 local/temp variable or standard parameter with input mode value
+        elif (entity._datatype=='Variable' and self._check_nesting_level(entity._name)==self._scopes_list[-1]._nesting_level) or (entity._datatype=='Parameter' and self._check_nesting_level(entity._name)==self._scopes_list[-1]._nesting_level and entity._mode=='in') or (entity._datatype=='Tmp_Variable'):
+            self._assembly_file.write('sw $t%s, -%d($s0)\n' % (register_number, entity._offset))
+        #1.2.3.2  parameter passed with reference
+        elif (entity._datatype=='Parameter' and self._check_nesting_level(entity._name)==self._scopes_list[-1]._nesting_level and entity._mode=='inout'):
+            self._assembly_file.write('lw $t0, -%d($sp)\n' % entity._offset)
+            self._assembly_file.write('sw $t%s, 0($t0)\n' % register_number)
+        ##@#1.2.3.3 local var, ancestor parameter with ref
+        elif (entity._datatype=='Variable' and self._check_nesting_level(entity._name)<self._scopes_list[-1]._nesting_level)or ( entity._datatype=='Parameter' and self._check_nesting_level(entity._name)<self._scopes_list[-1]._nesting_level and entity._mode=='in'):
+            self.gnlvcode(variable)
+            self._assembly_file.write('sw $t%s, ($t0)\n' % register_number)
+        ##1.2.3.4 parameter with ref from ancestor
+        elif (entity._datatype=='Parameter' and self._check_nesting_level(entity._name)<self._scopes_list[-1]._nesting_level and entity._mode=='inout'):
+            self.gnlvcode(variable)
+            self._assembly_file.write('lw $t0, ($t0)\n')
+            self._assembly_file.write('sw $t%s, ($t0)\n' % register_number)
+        #elif sta8era
+        else:
+            self.error("Error with the storerv method in the generation of the assembly file.",0)
 
     # Opposite of loadvr. Creates assembly code for storing the data of the register to the memory
     def storerv(self,register_number, variable):
@@ -1414,3 +1442,4 @@ def main():
 
 #main(sys.argv[1])
 main()
+
