@@ -2,6 +2,7 @@ program tester
 {
     # This program's purpose is to cover many checks that weren't covered in the given files #
 	declare a,b,c,d;
+	declare x,y,z;
 
 	function bigExpressionsTester(in x, in y, in z)
 	{

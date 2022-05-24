@@ -581,6 +581,7 @@ class Parser(Lex):
                 if entity_name == entity._name:
                     return scope._nesting_level
 
+                  
     # Creates assembly code for transferring the ADDRESS of a non local entity into $t0
     def gnlvcode(self,variable):
         #search at symbol table for the non local variable
@@ -674,7 +675,8 @@ class Parser(Lex):
             self._assembly_file.write('sw $t%s, ($t0)\n' % register_number)
         #elif sta8era
         else:
-            self.error('Error with the loadvr method in the generation of the assembly file.Entity not recognised',0)
+            self.error('Error with the storerv method in the generation of the assembly file.",0)
+
 
     
 
@@ -1396,3 +1398,4 @@ def main():
 
 #main(sys.argv[1])
 main()
+
