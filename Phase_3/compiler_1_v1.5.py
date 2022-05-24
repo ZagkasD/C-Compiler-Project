@@ -3,7 +3,6 @@
 
 # Must be run in python3 
 
-from sqlite3 import paramstyle
 import sys
 
 # Tokens = words (or characters) from the input file 
@@ -622,18 +621,18 @@ class Parser(Lex):
 
             # For temp variable the name is good enough
 
-            if ((entity._datatype == 'Variable' and self.check_nesting_level(variable._name) == self._scopes_list[-1]._nesting_level)
-                 or (entity._datatype == 'Parameter' and self.check_nesting_level(variable._name) == self._scopes_list[-1]._nesting_level and entity._mode == 'cv')
+            if ((entity._datatype == 'Variable' and self.check_nesting_level(variable) == self._scopes_list[-1]._nesting_level)
+                 or (entity._datatype == 'Parameter' and self.check_nesting_level(variable) == self._scopes_list[-1]._nesting_level and entity._mode == 'cv')
                  or (entity._datatype == "Tmp_Variable")):
                 self._assembly_file.write("  lw t%s, -%d(sp)\n" %(register_number,entity._offset))
             
             # For Parameter in the same nesting level and input mode as reference
-            elif(entity._datatype == 'Parameter' and self.check_nesting_level(variable._name) == self._scopes_list[-1]._nesting_level and entity._mode == 'ref'):
+            elif(entity._datatype == 'Parameter' and self.check_nesting_level(variable) == self._scopes_list[-1]._nesting_level and entity._mode == 'ref'):
                 self._assembly_file.write('  lw $t0, -%d($sp)\n' % entity._offset)
                 self._assembly_file.write('  lw $t%s, ($t0)\n' % register_number)
             
             # Local var or parameter with cv which belongs to a ancestor (nesting level smaller)
-            elif((entity._datatype == 'Variable' and self.check_nesting_level(variable._name) < self._scopes_list[-1]._nesting_level)
+            elif((entity._datatype == 'Variable' and self.check_nesting_level(variable) < self._scopes_list[-1]._nesting_level)
                   or entity._datatype == 'Parameter' and self.check_nesting_level(variable._name) < self._scopes_list[-1]._nesting_level and entity._mode == 'cv'):
                 self.gnlvcode(variable)
                 self._assembly_file.write('  lw $t%s, ($t0)\n' % register_number)
