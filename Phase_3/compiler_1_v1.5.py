@@ -3,6 +3,7 @@
 
 # Must be run in python3
 
+from ast import parse
 import sys
 
 # Tokens = words (or characters) from the input file 
@@ -294,7 +295,7 @@ class Entity():
 class Variable(Entity):
     def __init__(self, name=None, offset = 0, datatype = None):
         super().__init__(name)
-        self._offset = offset     # Distace from start of activation record
+        self._offset = offset     # Distance from start of activation record
         self._datatype = datatype 
 
 class FormalParameter(Entity):
@@ -312,7 +313,7 @@ class Parameter():
 
 class TemporaryVariable(Entity):
     # Cant have Variable as parent class because isinstance method in
-    # print_sumbol_table wont work. Read isinstance() for info
+    # print_symbol_table wont work. Read isinstance() for info
     def __init__(self, name=None, datatype=None, offset=0):
         super().__init__(name)
         self._datatype = datatype
@@ -585,17 +586,16 @@ class Parser(Lex):
     # Creates assembly code for transferring the ADDRESS of a non local entity into $t0
     def gnlvcode(self,variable):
         #search at symbol table for the non local variable
-        foreign_entity= self._search_entity(variable) #TODO emfanish la8oys an den bre8ei to onoma ths metablhths
-        
+        foreign_entity= self._search_entity(variable)
         #search for the scope level the variable is at
-        scope_levels=self._scopes_list[-1]._nesting_level - self._check_nesting_level(foreign_entity._name)
-       #point to parent
-        self._assembly_file.write('lw $t0, -4($sp)\n')
+        scope_levels=self._scopes_list[-1]._nesting_level - self.check_nesting_level(foreign_entity._name)
+        #point to parent
+        self._assembly_file.write(' lw $t0, -4($sp)\n')
         while scope_levels>0:
             #for every ancestor
-            self._assembly_file.write('lw $t0, -4($sp)\n')
+            self._assembly_file.write(' lw $t0, -4($sp)\n')
             scope_levels-=1
-        self._assembly_file.write('addi $t0, $t0, %d \n'% foreign_entity._offset)
+        self._assembly_file.write(' addi $t0, $t0, %d \n'% foreign_entity._offset)
 
 
     # Creates assembly code for transferring entity from memory to register 
@@ -649,6 +649,33 @@ class Parser(Lex):
             else:
                 self.error("Error with the loadvr method in the generation of the assembly file.",0)
 
+                
+    # Opposite of loadvr. Creates assembly code for storing the data of the register to the memory
+    def storerv(self,register_number, variable):
+        #the entity for storing to the register
+        entity= self._search_entity(variable)
+        #1.2.3.5 global variable
+        if (entity._datatype=='Variable' and self._check_nesting_level(entity._name)==0):# nesting level = 0 because it's the main program
+            self._assembly_file.write('sw $t%s, -%d($s0)\n' % (register_number, entity._offset))
+        #1.2.3.1 local/temp variable or standard parameter with input mode value
+        elif (entity._datatype=='Variable' and self._check_nesting_level(entity._name)==self._scopes_list[-1]._nesting_level) or (entity._datatype=='Parameter' and self._check_nesting_level(entity._name)==self._scopes_list[-1]._nesting_level and entity._mode=='in') or (entity._datatype=='Tmp_Variable'):
+            self._assembly_file.write('sw $t%s, -%d($s0)\n' % (register_number, entity._offset))
+        #1.2.3.2  parameter passed with reference
+        elif (entity._datatype=='Parameter' and self._check_nesting_level(entity._name)==self._scopes_list[-1]._nesting_level and entity._mode=='inout'):
+            self._assembly_file.write('lw $t0, -%d($sp)\n' % entity._offset)
+            self._assembly_file.write('sw $t%s, 0($t0)\n' % register_number)
+        ##@#1.2.3.3 local var, ancestor parameter with ref
+        elif (entity._datatype=='Variable' and self._check_nesting_level(entity._name)<self._scopes_list[-1]._nesting_level)or ( entity._datatype=='Parameter' and self._check_nesting_level(entity._name)<self._scopes_list[-1]._nesting_level and entity._mode=='in'):
+            self.gnlvcode(variable)
+            self._assembly_file.write('sw $t%s, ($t0)\n' % register_number)
+        ##1.2.3.4 parameter with ref from ancestor
+        elif (entity._datatype=='Parameter' and self._check_nesting_level(entity._name)<self._scopes_list[-1]._nesting_level and entity._mode=='inout'):
+            self.gnlvcode(variable)
+            self._assembly_file.write('lw $t0, ($t0)\n')
+            self._assembly_file.write('sw $t%s, ($t0)\n' % register_number)
+        #elif sta8era
+        else:
+            self.error("Error with the storerv method in the generation of the assembly file.",0)
 
     # Opposite of loadvr. Creates assembly code for storing the data of the register to the memory
     def storerv(self,register_number, variable):
@@ -664,7 +691,7 @@ class Parser(Lex):
         elif (entity._datatype=='Parameter' and self._check_nesting_level(entity._name)==self._scopes_list[-1]._nesting_level and entity._mode=='inout'):
             self._assembly_file.write('lw $t0, -%d($sp)\n' % entity._offset)
             self._assembly_file.write('sw $t%s, 0($t0)\n' % register_number)
-##@#1.2.3.3 local var, ancestor parameter with ref
+        ##@#1.2.3.3 local var, ancestor parameter with ref
         elif (entity._datatype=='Variable' and self._check_nesting_level(entity._name)<self._scopes_list[-1]._nesting_level)or ( entity._datatype=='Parameter' and self._check_nesting_level(entity._name)<self._scopes_list[-1]._nesting_level and entity._mode=='in'):
             self.gnlvcode(variable)
             self._assembly_file.write('sw $t%s, ($t0)\n' % register_number)
@@ -675,19 +702,33 @@ class Parser(Lex):
             self._assembly_file.write('sw $t%s, ($t0)\n' % register_number)
         #elif sta8era
         else:
-            self.error('Error with the storerv method in the generation of the assembly file.",0)
-
-
+            self.error("Error with the storerv method in the generation of the assembly file.",0)
     
 
 
 
     #===========================================#
-    #            Final Code Generator            #
+    #            Final Code Generator           #
     #===========================================#
 
-    def final_code_generator(quad,program_name):
-        pass
+    def final_code_generator(self,quad,block_name):
+
+        # At the start of the program the code needs to jump to the to the first command of the
+        # main program. Thus the first command needs to be a jump. The label of the first command
+        # of the main program is not yet known, but we can place a label before that command and
+        # jump to that label. The next command after the label will be the first command of the main program
+        if quad.label == 0: # first quad is quads_list
+            self._assembly_file.write("j main\n")
+        
+        # Write the label
+        # For the main
+        if block_name == self._main_program_name:
+            self._assembly_file.write("Lmain:\n")
+        # For every other label
+        else: 
+            self._assembly_file.write("L_"+str(quad._label)+":\n")
+
+        
 
 
 
@@ -1384,6 +1425,7 @@ def main():
 
     parser.inter_code_file_gen(input_file_name)
     parser._symbol_table_file.close()
+    
 
     if parser._subprogram_flag == False:
         print('C-imple file has no subprograms. Generating C file...')
@@ -1394,6 +1436,8 @@ def main():
     else:
         print('C-imple file has subprograms. C file generation aborted...')
 
+
+    parser._assembly_file.close()
     input_file.close()
 
 #main(sys.argv[1])
