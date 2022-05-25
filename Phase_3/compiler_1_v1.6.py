@@ -3,6 +3,7 @@
 
 # Must be run in python3 
 
+from asyncio.windows_events import NULL
 import sys
 
 # Tokens = words (or characters) from the input file 
@@ -503,11 +504,12 @@ class Parser(Lex):
     def search_entity(self,entity_name):
         if not self._scopes_list:
             # if scopes_list is empty
-            return
+            self.error('Entity list is empty',0)
         for scope in self._scopes_list:
             for entity in scope._entities_list:
                 if entity._name == entity_name:
                     return entity
+        self.error('Entity was not found',0)
 
     # Writes the symbol table into the symbol table file.
     # Write happens before the removal of each scope.
@@ -639,6 +641,7 @@ class Parser(Lex):
             # The entity can be on a different nesting level (scope) from the local one (the last one)
             # We need to check that
             entity = self.search_entity(variable)
+
             
             # Local var or par with value or temp var
             # Massive if, need to check a lot of things
@@ -824,7 +827,8 @@ class Parser(Lex):
             self._assembly_file.write("  ecall\n")        # for output
 
         # Parameter
-        elif quad.op == 'par':
+        elif quad.op == 'par':           
+            
             if block_name == self._main_program_name:
                 # caller is main, nesting level is zero
                 caller_nesting_lvl = 0
@@ -835,16 +839,18 @@ class Parser(Lex):
                 caller = self.search_entity(block_name)
                 caller_nesting_lvl = self.check_nesting_level(caller._name)
                 framelength = caller._framelength
-
+           
             # If the pars_list is empty 
             if not self._pars_list:
                 # Before we pass in the first parameter, we need the fp to be at the stack 
                 # of the function that will be created
                 self._assembly_file.write('  addi $fp, $sp, %d\n' % framelength)
+            
             self._pars_list.append(quad)
+            
             # The offset of each parameter needs to be at the fourth+ place of the stack
             par_offset = 12 + 4 * self._pars_list.index(quad)
-
+           
             # Parameter with value
             if quad.arg2 == 'cv':
                 self.loadvr(quad.arg1, '0') # load the value of the parameter into $t0
@@ -882,8 +888,14 @@ class Parser(Lex):
                         # Place the address of the variable in the correct place in the stack of the new function
                         self._assembly_file.write("  sw $t0, -%d($fp)\n" %par_offset)
 
+            elif quad.arg2 == 'ret':
+                variable = self.search_entity(quad.arg1)
+                self._assembly_file.write('  addi $t0, $sp, -%d\n' % variable._offset)
+                self._assembly_file.write('  sw $t0, -8($fp)\n')
+
         #call
         elif quad.op == 'call':
+
             if block_name != self._main_program_name:
                 caller = self.search_entity(block_name)
                 caller_nesting_level = self.check_nesting_level(block_name)
@@ -891,19 +903,25 @@ class Parser(Lex):
             else:
                 caller_nesting_level = 0
                 framelength = self._main_program_framelength
-            to_call = self.search_entity(quad.arg1)
+
+            to_call = self.search_entity(quad.dest)
             to_call_nesting_level = self.check_nesting_level(quad.arg1)
-        
-            # if not self._pars_list: # if list is empty
+
+            # # We need to remove from the parameter list the parameters with ret mode
+            # if self._pars_list:
             #     if self._pars_list[-1].arg2 == 'ret':
             #         self._pars_list.pop()
-            #     else:
-            #         self._assembly_file.write('addi $fp, $sp, %d\n' % framelength)
+           
+            # The syntax analyzer can not find catch the error where we for example
+            # call f2(in x) but function f2 doesn't have parameter
+            # We catch that error here
 
-            #arguments check
+            # arguments check
             # if len(to_call._formalParameters) != len(self._pars_list):
             #     self.error('Subprogram \'%s\' arguments do not match definition' % to_call._name, 0)
-            #     #TODO check
+
+            # What about what mode the parameters are?
+            # TODO check the mode of the parameters
 
             #IF the nesting level is the same The functions have the same parent 
             if caller_nesting_level == to_call_nesting_level:
@@ -1217,7 +1235,7 @@ class Parser(Lex):
         elif self._token._recognized_string == 'call':
             self.get_token()
             proc_name = self.callStat()
-            self.genQuad('call',proc_name,'_','_')
+            self.genQuad('call','_','_',proc_name)
         elif self._token._recognized_string == 'return':
             self.get_token()
             self.returnStat()
@@ -1410,7 +1428,7 @@ class Parser(Lex):
             self.get_token()
             self.actualparitem()
 
-
+    # Actual generation of quads for the parameters
     def actualparitem(self):
         if self._token._recognized_string == 'in':
             self.get_token()
