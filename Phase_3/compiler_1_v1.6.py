@@ -784,7 +784,7 @@ class Parser(Lex):
         
         #Jumps
         if(quad.op=='jump'):
-            self._assembly_file.write(' j L_%d\n' %quad.dest)
+            self._assembly_file.write('  j L_%d\n' %quad.dest)
 
         elif (quad.op in relational_operators):
             self.loadvr(quad.arg1, '1')
@@ -800,7 +800,7 @@ class Parser(Lex):
         elif quad.op in arithmetic_operators:
             self.loadvr(quad.arg1, '1')
             self.loadvr(quad.arg2, '2')
-            self._assembly_file.write(' %s $t1, $t2, $t1\n'% (ar_operators_fin_code[arithmetic_operators.index(quad.op)]))
+            self._assembly_file.write('  %s $t1, $t2, $t1\n'% (ar_operators_fin_code[arithmetic_operators.index(quad.op)]))
             self.storerv('1', quad.dest)
 
         # Return value from function
@@ -811,11 +811,17 @@ class Parser(Lex):
         
         # Input
         elif quad.op == 'inp':
-            pass
-        
+            self._assembly_file.write("  li $a7, 5\n") # standard command for input
+            self._assembly_file.write("  ecall\n")        
+            self._assembly_file.write("  mv  $t0, $a0\n") # move the input to t0
+            self.storerv('0',quad.arg1) # store the input into the variable
+
         # Ouput
         elif quad.op == 'out':
-            pass
+            self.loadvr(quad.arg1,'0')  # load the var into t0
+            self._assembly_file.write("  mv $a0, $t0\n")  # move t0 to a0
+            self._assembly_file.write("  li $a7, 1\n")    # for output
+            self._assembly_file.write("  ecall\n")        # for output
 
         # Parameter
         elif quad.op == 'par':
@@ -901,20 +907,20 @@ class Parser(Lex):
 
             #IF the nesting level is the same The functions have the same parent 
             if caller_nesting_level == to_call_nesting_level:
-                self._assembly_file.write(' lw $t0,-4($sp)\n' )
-                self._assembly_file.write(' sw $t0,-4($sp)\n' )
+                self._assembly_file.write('  lw $t0,-4($sp)\n' )
+                self._assembly_file.write('  sw $t0,-4($sp)\n' )
            
             #IF the nesting level is the difrent The caller is to_call parent
             else:
-                self._assembly_file.write(' sw $sp,-4($fp)\n' )
+                self._assembly_file.write('  sw $sp,-4($fp)\n' )
             #move stack pointer to to_call
-            self._assembly_file.write(' addi $sp,$sp, %d\n' % framelength )
+            self._assembly_file.write('  addi $sp,$sp, %d\n' % framelength )
             #call the function
             #check again
-            self._assembly_file.write(' jal L_%d\n' % to_call._startingQuad)
+            self._assembly_file.write('  jal L_%d\n' % to_call._startingQuad)
 
             #get the stack pointer
-            self._assembly_file.write(' addi $sp, $sp, -%d\n' % framelength)
+            self._assembly_file.write('  addi $sp, $sp, -%d\n' % framelength)
             #check inside called function beginning sw ra,(sp) and at the end lw ra,(sp)  / jr ra
 
 
