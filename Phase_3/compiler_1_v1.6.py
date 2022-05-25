@@ -785,10 +785,11 @@ class Parser(Lex):
         #Jumps
         if(quad.op=='jump'):
             self._assembly_file.write(' j L_%d\n' %quad.dest)
+
         elif (quad.op in relational_operators):
             self.loadvr(quad.arg1, '1')
             self.loadvr(quad.arg2, '2')
-            self._assembly_file.write('  %s $t1, $t2, L_%s\n' %(cond_jump_fin_code[relational_operators.index(quad.op)]),quad.dest)
+            self._assembly_file.write('  %s $t1, $t2, L_%s\n' %((cond_jump_fin_code[relational_operators.index(quad.op)]),quad.dest))
        
         # Assignment
         elif quad.op == ':=':
