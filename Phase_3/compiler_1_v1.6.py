@@ -88,8 +88,8 @@ class Lex(Token):
         pass
 
     def error(self,error_msg,line_number):
-        print("Error in file:"+sys.argv[1]+' || line:'+str(line_number)+' || '+error_msg)
-        #print("Error in file: testing.ci"+' || line: '+str(line_number)+' || '+error_msg)
+        #print("Error in file:"+sys.argv[1]+' || line:'+str(line_number)+' || '+error_msg)
+        print("Error in file: testing.ci"+' || line: '+str(line_number)+' || '+error_msg)
         self._input_file.close()
         exit(1)
 
@@ -729,7 +729,7 @@ class Parser(Lex):
         if quad.label == 0: # first quad is quads_list
             # We don't print the L0 label for them j main because
             # that would ruin the label numbering fpr the rest of the labels
-            self._assembly_file.write("  j main\n")
+            self._assembly_file.write("j Lmain\n")
         
         # Write the label
         # For the main
@@ -891,7 +891,7 @@ class Parser(Lex):
             else:
                 caller_nesting_level = 0
                 framelength = self._main_program_framelength
-            to_call = self.search_entity(quad.dest)
+            to_call = self.search_entity(quad.arg1)
             to_call_nesting_level = self.check_nesting_level(quad.arg1)
         
             # if not self._pars_list: # if list is empty
