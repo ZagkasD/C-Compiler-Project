@@ -623,9 +623,9 @@ class Parser(Lex):
         # When scope_levels = 0 then we are at the variable nesting level
         while scope_levels>0:
             #for every ancestor
-            self._assembly_file.write('  lw $t0, -4($sp)\n')
+            self._assembly_file.write('  lw $t0, -4($t0)\n')
             scope_levels-=1
-        self._assembly_file.write('  addi $t0, $t0, %d \n'% foreign_entity._offset)
+        self._assembly_file.write('  addi $t0, $t0, -%d\n'% foreign_entity._offset)
 
 
 
