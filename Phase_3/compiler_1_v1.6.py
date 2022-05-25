@@ -3,7 +3,6 @@
 
 # Must be run in python3 
 
-from asyncio.windows_events import NULL
 import sys
 
 # Tokens = words (or characters) from the input file 
