@@ -24,7 +24,7 @@ class Family:
 	addOperator = 'addOperator'	# +,-
 	mulOperator = 'mulOperator'	# *,/
 	relOperator = 'relOperator'	# ==,>=,<,<>,=
-	assignment  = 'assignmet'	# :=
+	assignment  = 'assignment'	# :=
 	delimiter   = 'delimiter'   # ,,.,;
 	groupSymbol = 'groupSymbol'	# (,),{,},[,]
 	end_of_file =  9 
@@ -88,8 +88,8 @@ class Lex(Token):
         pass
 
     def error(self,error_msg,line_number):
-        #print("Error in file:"+sys.argv[1]+' || line:'+str(line_number)+' || '+error_msg)
-        print("Error in file: testing.ci"+' || line: '+str(line_number)+' || '+error_msg)
+        print("Error in file:"+sys.argv[1]+' || line:'+str(line_number)+' || '+error_msg)
+        #print("Error in file: testing.ci"+' || line: '+str(line_number)+' || '+error_msg)
         self._input_file.close()
         exit(1)
 
@@ -216,6 +216,7 @@ class Lex(Token):
                 token_string = char 
                 return Token(Family.delimiter, token_string, self._line_number)
             #EOF
+            # Different than end of program (".")
             elif char == '':
                 token_string = char
                 return Token(Family.end_of_file, token_string, self._line_number)
@@ -275,14 +276,17 @@ class Lex(Token):
 #     Symbol Table Classes      #
 #===============================#  
 
+# Initially, we tried to implement the compiler with object oriented architecture. Unfortunately, we had issues with the inheritance of the classes
+# and their dependencies. That's why, we settled with implementing the methods inside the Parser class. Table class was not used.  
 class Table(Lex):
     pass
 
+# Scope will be used to differentiate different levels of the cimple code, depending of the functions called.
 class Scope():
     def __init__(self, nesting_level = 0,):
-        self._nesting_level = nesting_level # of scopes, 0 for main program
-        self._entities_list = list()        # list of entities (variables, functions, etc...) in one scope
-        self._offset = 12                    # 12 bytes for return address, return value and access  
+        self._nesting_level = nesting_level  # of scopes, 0 for main program
+        self._entities_list = list()         # list of entities (variables, functions, etc...) in one scope
+        self._offset = 12                    # 12 bytes for return address, return value and access 
 
     def get_next_offset(self):
         return self._offset + 4
@@ -303,6 +307,7 @@ class FormalParameter(Entity):
         self._mode = mode              # Parameter mode: cv(value), ref, ret
         self._datatype = datatype     
 
+# Refrained from inheriting name field from Entity class. Issues with isinstance method. Check isinstance documentation. 
 class Parameter():
     def __init__(self, name=None, datatype=None, offset=0, mode = None):
         self._name = name
@@ -318,6 +323,7 @@ class TemporaryVariable(Entity):
         self._datatype = datatype
         self._offset = offset
 
+# Procedure does not return a value
 class Procedure(Entity):
     def __init__(self, name=None, startingQuad = None,framelength = 0, formalParameters = list()):
         super().__init__(name)
@@ -325,6 +331,7 @@ class Procedure(Entity):
         self._framelength = framelength             # Length in bytes of the activation record
         self._formalParameters = formalParameters   # List of parameters
     
+# Function does return a value
 class Function():
     def __init__(self, name=None, datatype = None, formalParameters=list(),startingQuad=None, framelength=0):
         self._name = name
@@ -333,6 +340,7 @@ class Function():
         self._formalParameters = formalParameters
         self._datatype = datatype
 
+# Constants are not part of cimple. We created this class according to the theory given
 class SymbolicConstant():
     def __init__(self, name = None, datatype = None, value = 0):
         self._name = name
@@ -354,7 +362,8 @@ class SymbolicConstant():
 #        Syntax Analyzer        #
 #===============================#
 
-# Class responsible for checking the syntax of the input file
+# Class responsible for checking the syntax of the input file. Because of inheritance issues, we ended up implementing all the methods here.
+# We have them categorized according to their job. 
 class Parser(Lex):
     def __init__(self, 
         family=None,
@@ -383,19 +392,19 @@ class Parser(Lex):
 
         self._lexical_analyzer = lexical_analyzer
         self._label_number = label_number       # var for counting the labels of the quads
-        self._quads_list = quads_list           # list of quads. Basically, this is the output of the intermidiate code
+        self._quads_list = quads_list           # list of quads. Basically, this is the output of the intermediate code
         self._temp_var_number = temp_var_number # var for counting temp variables
         self._temp_var_list = temp_var_list     # list for storing temp variables
-        self._main_program_name = main_program_name
-        self._main_program_starting_quad = main_program_starting_quad
-        self._main_program_framelength = main_program_framelength
+        self._main_program_name = main_program_name # necessary to differentiate all the blocks of code (functions) from the main block (main program)
+        self._main_program_starting_quad = main_program_starting_quad   # same as above
+        self._main_program_framelength = main_program_framelength       # same as above
         self._subprogram_flag = subprogram_flag # flag if subprograms exist. If not, can produce C file
-        self._scopes_list = scopes_list
+        self._scopes_list = scopes_list         # list of scopes
         self._ci_var_list = ci_var_list         # ci variables for production of c file         
-        self._inter_code_file = inter_code_file
-        self._symbol_table_file = symbol_table_file
-        self._file_name = file_name
-        self._assembly_file = assembly_file     # asm file for assembly in riskV
+        self._inter_code_file = inter_code_file # file for intermediate code, .int file
+        self._symbol_table_file = symbol_table_file # file for the symbol table, .symb file
+        self._file_name = file_name             # need to name of the input file to create all the other files with the same name and different type
+        self._assembly_file = assembly_file     # asm file for assembly in riskV, .asm file
         self._enter_in_main = enter_in_main     # Used as a flag in the assembly file generator
         self._pars_list = pars_list             # list of parameters for assembly file
 
@@ -419,22 +428,33 @@ class Parser(Lex):
         for entity in self._scopes_list[nesting_level]._entities_list:
             if entity._name == var_name and entity._datatype =='Variable':
                 self.error('Variable << %s >> is already declared.' %var_name, self._line_number)
+        # Check if variable entity is already used as a subprogram parameter
         for entity in self._scopes_list[nesting_level]._entities_list:
             if entity._name == var_name and entity._datatype =='Parameter':
                 self.error('Variable << %s >> is subprogram parameter. Can not be declared.' %var_name, self._line_number)
+        # Take the offset of last scope in the scope list. That's where we want to input the new variable
         var_offset = self._scopes_list[-1]._offset
+        # Append the new variable at the last scope, at last place of the entities list
         self._scopes_list[-1]._entities_list.append(Variable(var_name,var_offset,'Variable'))
         # Increase the offset of the scope, for the next input
         self._scopes_list[-1]._offset = self._scopes_list[-1].get_next_offset()
 
+    # New entry goes to the highest scope, the scope of the last function/procedure
+    # Same logic as add_variable method above
     def add_function(self,func_name,datatype):
         nesting_level = self._scopes_list[-1]._nesting_level
-        format_par_list = []
+        # Bug here. Logically, when we create a new Function object, a new formal_par_list should be created, because that list is a field in the object.
+        # For some unknown reason, when we create a new Function/Procedure object, it doesn't create a new formal_par_list,
+        # instead it copies the formal_par_list() from the previous Function/Procedure objects
+        # We tried to fix that by creating an empty formal_par_list and passing that as input of the Function object at its creation
+        # but at no avail. We can see the bug at the c file when the same parameter for a function gets printed multiple times
+        formal_par_list = []
         for entity in self._scopes_list[nesting_level]._entities_list:
             if entity._name == func_name:
                 self.error('Function/Procedure << %s >> already declared.' %func_name,self._line_number)
-        self._scopes_list[-1]._entities_list.append(Function(func_name,datatype,format_par_list))
+        self._scopes_list[-1]._entities_list.append(Function(func_name,datatype,formal_par_list))
 
+    # Add parameter to the next scope. Works with the add_formal_param method to complete a function/procedure
     def add_parameter(self, par_name,mode):
         par_offset = self._scopes_list[-1].get_next_offset()
         self._scopes_list[-1]._offset = par_offset  # update the offset of the scope
@@ -463,22 +483,23 @@ class Parser(Lex):
     # Update startingQuad which was not available at creation
     def update_startingQuad(self,program_name):
         starting_quad = self.nextquad() # next quad will be the block quad, aka the start of the code
-        if program_name == self._main_program_name and starting_quad != 0:
+        if program_name == self._main_program_name:
             # This is to check if the only block is the main program block
             # There is no need for an actual starting quad because the main block
-            # Will not be called from somewhere else
+            # will not be called from somewhere else
             # Thats why we manually set it
             self._main_program_starting_quad = starting_quad
             return starting_quad
         self._scopes_list[-2]._entities_list[-1]._startingQuad = starting_quad
         return starting_quad
 
-    # Works like update_fields. It updates formal parameters for functions/procedures
+    # Add parameter to the function/procedure of the previous scope. Works with the add_parameter method to complete a function/procedure
     def add_formal_param(self,par_name, mode):
         self._scopes_list[-1]._offset += 4
         self._scopes_list[-2]._entities_list[-1]._formalParameters.append(FormalParameter(par_name, mode, 'Argument'))
 
     # Search information at the symbol table, starting from the highest scope
+    # Returns the object
     def search_entity(self,entity_name):
         if not self._scopes_list:
             # if scopes_list is empty
@@ -488,14 +509,15 @@ class Parser(Lex):
                 if entity._name == entity_name:
                     return entity
 
-
+    # Writes the symbol table into the symbol table file.
+    # Write happens before the removal of each scope.
     def print_symbol_table(self):
             self._symbol_table_file.write('\nSymbol Table:\n')
             # Reversed scopes_list to print the LAST scope added
             for scope in reversed(self._scopes_list):
                 self._symbol_table_file.write('\n(Scope ' + str(scope._nesting_level)+')')
                 for entity in scope._entities_list:
-                    # Using function isinstanc e to check what type of object is the entity we are checking
+                    # Using function isinstance to check what type of object is the entity we are checking
                     # Each entity needs each own print, because of different fields
                     if isinstance(entity, Variable):
                         self._symbol_table_file.write('<---| '+str(entity._datatype) + ': \'' +str(entity._name) + '\' / offset:' + str(entity._offset)+'|')
@@ -555,13 +577,14 @@ class Parser(Lex):
     def mergeList(self,list_a, list_b):
         return list_a + list_b
 
-    # Scan all the quads label's for those is the provided label list
+    # Scan all the quads labels for those is the provided label list
     # Fill in the dest of each quad with the provided dest
     def backpatch(self, label_list, dest):
         for i in range(len(self._quads_list)):
             if self._quads_list[i].label in label_list:
                 self._quads_list[i].dest = dest
 
+    # Write the quads in the intermediate code file, after the compilation completion
     def inter_code_file_gen(self,input_file_name):
         self._inter_code_file = open(input_file_name[:-2] + 'int','w')
         for quad in self._quads_list:
@@ -578,6 +601,8 @@ class Parser(Lex):
     #             Final Code Methods            #
     #===========================================#
 
+    # Searches every entity in every entity list in every scope for the given entity name
+    # and it returns its nesting level
     def check_nesting_level(self,entity_name):
         if not self._scopes_list:  # scopes list is empty 
             return                 
@@ -586,15 +611,16 @@ class Parser(Lex):
                 if entity_name == entity._name:
                     return scope._nesting_level
 
-    # Creates assembly code for transferring the ADDRESS of a non local entity into $t0
+
+    # Creates assembly code for transferring the ADDRESS of a non local entity into $t0 of the current nesting level
     def gnlvcode(self,variable):
         #search at symbol table for the non local variable
         foreign_entity= self.search_entity(variable)
         #search for the scope level the variable is at
         scope_levels=self._scopes_list[-1]._nesting_level - self.check_nesting_level(foreign_entity._name)
         #point to parent
-
         self._assembly_file.write('  lw $t0, -4($sp)\n')
+        # When scope_levels = 0 then we are at the variable nesting level
         while scope_levels>0:
             #for every ancestor
             self._assembly_file.write('  lw $t0, -4($sp)\n')
@@ -616,8 +642,9 @@ class Parser(Lex):
             
             # Local var or par with value or temp var
             # Massive if, need to check a lot of things
+           
             # For Variable, need to check if it is variable and if the nesting level of the variable
-            # is the last nesting level. That is, if it is in the scope_list[-1].
+            # is the last nesting level. That is, if it is in the scope_list[-1]. We don't need gnlvcode, we have direct access to the variable
 
             # For Parameter, need to check the name, the nesting level and the input mode for cv
 
@@ -629,19 +656,20 @@ class Parser(Lex):
                 self._assembly_file.write("  lw t%s, -%d(sp)\n" %(register_number,entity._offset))
             
             # For Parameter in the same nesting level and input mode as reference
+            # Because the par is with ref, we don't have the value, but the address. We need the value.
             elif(entity._datatype == 'Parameter' and self.check_nesting_level(variable) == self._scopes_list[-1]._nesting_level and entity._mode == 'ref'):
-                self._assembly_file.write('  lw $t0, -%d($sp)\n' % entity._offset)
-                self._assembly_file.write('  lw $t%s, ($t0)\n' % register_number)
+                self._assembly_file.write('  lw $t0, -%d($sp)\n' % entity._offset) # store into t0 the address of the par
+                self._assembly_file.write('  lw $t%s, ($t0)\n' % register_number)  # use that address to get the value
             
             # Local var or parameter with cv which belongs to a ancestor (nesting level smaller)
             elif((entity._datatype == 'Variable' and self.check_nesting_level(variable) < self._scopes_list[-1]._nesting_level)
                   or entity._datatype == 'Parameter' and self.check_nesting_level(variable) < self._scopes_list[-1]._nesting_level and entity._mode == 'cv'):
-                self.gnlvcode(variable)
+                self.gnlvcode(variable) # gnlvcode stores into t0 the value
                 self._assembly_file.write('  lw $t%s, ($t0)\n' % register_number)
 
             # Parameter with ref that belongs to an ancestor (smaller nesting level)
             elif(entity._datatype == 'Parameter' and self.check_nesting_level(variable) < self._scopes_list[-1]._nesting_level and entity._mode == 'ref'):
-                self.gnlvcode(variable)
+                self.gnlvcode(variable) # gnlvcode stores into t0 the address of the par, not the value
                 self._assembly_file.write('  lw $t0, ($t0)\n')
                 self._assembly_file.write('  lw $t%s, ($t0)\n' % register_number)
 
@@ -655,7 +683,7 @@ class Parser(Lex):
                 self.error("Error with the loadvr method in the generation of the assembly file.",0)
 
 
-     # Opposite of loadvr. Creates assembly code for storing the data of the register to the memory
+    # Opposite of loadvr. Creates assembly code for storing the data of the register to the memory
     def storerv(self,register_number, variable):
         #the entity for storing to the register
         entity= self.search_entity(variable)
@@ -721,6 +749,8 @@ class Parser(Lex):
             self._assembly_file.write("  mv $gp, $sp\n")
             self._enter_in_main = True
         # For every other label
+        # Bug here. The commands that should be in main, end up in their own label
+        # Those labels follow the main, which doesn't cause any issues
         else: 
             self._assembly_file.write("L_"+str(quad.label)+":\n")
 
@@ -733,17 +763,6 @@ class Parser(Lex):
             # Between the main program (global variables) and the point we call the main program
             # all the other functions will be implemented. Thus we need to move the sp as many bytes
             # as the activation record of the main program. That's where the gp will also be.
-
-            # Bug here. If we recursively call the program (ex, program fibonacci, calling function fibonacci)
-            # then we write in the assembly file two times the block for the main
-            # That is happening because the first time the compiler sees the quad of fibonacci
-            # it thinks that it is the main program, so it writes the proper commands in assembly
-            # After the function fibonacci has finished, the compiler sees the main program name again
-            # so it prints the same commands
-
-            #if block_name == self._main_program_name:
-            #    self._assembly_file.write("  addi $sp, $sp, %d\n" % self._main_program_framelength)
-            #    self._assembly_file.write("  mv $gp, $sp\n")
             
             # For every other function, we only need to store it's address to the ra register
             # so when the function is completed, we do jump back to the point the function was called
@@ -770,6 +789,7 @@ class Parser(Lex):
             self.loadvr(quad.arg1, '1')
             self.loadvr(quad.arg2, '2')
             self._assembly_file.write('  %s $t1, $t2, L_%s\n' %(cond_jump_fin_code[relational_operators.index(quad.op)]),quad.dest)
+       
         # Assignment
         elif quad.op == ':=':
             self.loadvr(quad.arg1, '0')     # load variable (arg1) into t0
@@ -930,12 +950,14 @@ class Parser(Lex):
         else:
             self.error('Keyword << program >> expected in line {0:d}. All programs should start with the keyword << program >>. Instead, the word << {1:s} >> appeared.'.format(self._line_number,self._token._recognized_string),self._line_number)
 
+    # Each function/procedure corresponds to one block
     def block(self,program_name):
         if self._token._recognized_string == '{':
             self.get_token()
             self.declarations()
             self.subprograms()
-
+            # update starting quad of the block, after the declaration/subprograms
+            # basically when the actual code of the block (function/procedure) begins
             starting_quad = self.update_startingQuad(program_name)
            
             # This self.genQuad will be executed AFTER all the functions
@@ -984,6 +1006,7 @@ class Parser(Lex):
             curly_bracket_open = '{'
             self.error('Expected char << '+curly_bracket_open+' >>. Instead got char << {1} >>'.format(curly_bracket_open,self._token._recognized_string), self._line_number)
         
+    # For if statements
     def ifStat(self):
         if self._token._recognized_string == '(':
             self.get_token()
@@ -996,9 +1019,9 @@ class Parser(Lex):
                 ifList = self.makeList(self.nextquad())
                 self.genQuad('jump','_','_','_')
                 self.backpatch(b_false, self.nextquad())
-
             else:
                 self.error('Expected char << ) >>. Instead got {0:s}'.format(self._token._recognized_string),self._line_number)
+            # The else part of the if condition
             self.elsepart()
             # self.backpatch ifList here to bypass else when if condition is met
             self.backpatch(ifList,self.nextquad())
@@ -1010,6 +1033,7 @@ class Parser(Lex):
             self.get_token()
             self.statements()
 
+    # In conditions
     def boolterm(self):
         b_true,b_false = self.boolfactor()
         while self._token._recognized_string == 'and':
@@ -1028,7 +1052,8 @@ class Parser(Lex):
                 self.get_token()
             else:
                 self.error('Expected << ; >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
-
+    
+    # In the declarations
     def varlist(self):  
         if self._token._family == 'id':
             self._ci_var_list.append(self._token._recognized_string)
@@ -1096,12 +1121,14 @@ class Parser(Lex):
         else:
             self.error('Expected << function >> or << procedure >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
 
+    # Go through the parameters of a function/procedure
     def formalparlist(self):
         self.formalparitem()
         while self._token._recognized_string == ',':
             self.get_token()
             self.formalparitem()
 
+    # For each parameter in the parameter list
     def formalparitem(self):
         if self._token._recognized_string == 'in':
             self.get_token()
@@ -1128,6 +1155,7 @@ class Parser(Lex):
         else:
             self.error('Expected << in >> or << inout >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
 
+    # The actual code
     def statements(self):
         if self._token._recognized_string == '{':
             self.get_token()
@@ -1147,13 +1175,14 @@ class Parser(Lex):
             else:
                 self.error('Expected << ; >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)        
 
+    # Inside a block
     def blockstatements(self):
         self.statement()
         while self._token._recognized_string == ';':
             self.get_token()
             self.statement()
 
-
+    # All the different statement types
     def statement(self):
         if self._token._family == 'id':
             dest_var = self._token._recognized_string # dest variable of assign statement
@@ -1192,7 +1221,7 @@ class Parser(Lex):
             self.get_token()
             self.printStat()
         
-
+    # Method for the assignment (:=)
     def assignStat(self):
         if self._token._recognized_string == ':=':
             self.get_token()
@@ -1200,6 +1229,7 @@ class Parser(Lex):
         else:
             self.error('Expected << := >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
 
+    # Method for the while statement
     def whileStat(self):
         if self._token._recognized_string == '(':
             self.get_token()
@@ -1216,6 +1246,8 @@ class Parser(Lex):
         else:
             self.error('Expected << ( >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
 
+    # Method for the switchcase statement
+    # Read the switchcase documentation in theory
     def switchcaseStat(self):
         exitList = self.emptyList()
         if self._token._recognized_string == 'case':
@@ -1245,6 +1277,8 @@ class Parser(Lex):
         else:
             self.error('Expected << default >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
 
+    # Method for the forcase statement
+    # Read the forecase documentation in theory
     def forcaseStat(self):
         if self._token._recognized_string == 'case':
             firstCondQuad = self.nextquad()
@@ -1271,6 +1305,8 @@ class Parser(Lex):
         else:
             self.error('Expected << default >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
 
+    # Method for the incase statement
+    # Read the incase documentation in theory
     def incaseStat(self):
         if self._token._recognized_string == 'case':
             flag = self.newTemp()
@@ -1295,6 +1331,7 @@ class Parser(Lex):
             self.error('Expected << case >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)            
         self.genQuad('=',1,'_',firstCondQuad)
 
+    # Method for the return value of a function (procedures don't return value)
     def returnStat(self):
         if self._token._recognized_string == '(':
             self.get_token()
@@ -1307,6 +1344,7 @@ class Parser(Lex):
         else:
             self.error('Expected << ( >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
 
+    # Method for calling a function/procedure
     def callStat(self):
         if self._token._family == 'id':
             proc_name = self._token._recognized_string            
@@ -1326,6 +1364,7 @@ class Parser(Lex):
         else:
             self.error('Expected << id >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
     
+    # Method for the print statement
     def printStat(self):
         if self._token._recognized_string == '(':
             self.get_token()
@@ -1337,7 +1376,8 @@ class Parser(Lex):
                 self.error('Expected << ) >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
         else:
             self.error('Expected << ( >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
-
+    
+    # Method for the input statement
     def inputStat(self):
         if self._token._recognized_string == '(':
             self.get_token()
@@ -1356,11 +1396,13 @@ class Parser(Lex):
         else:
             self.error('Expected << ( >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
 
+    # Used with the call method for a function
     def actualparlist(self):
         self.actualparitem()
         while self._token._recognized_string == ',':
             self.get_token()
             self.actualparitem()
+
 
     def actualparitem(self):
         if self._token._recognized_string == 'in':
@@ -1381,6 +1423,7 @@ class Parser(Lex):
         else:
             self.error('Expected << in >> or << inout >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
 
+    # Actual condition in every if-type method
     def condition(self):
         b_true, b_false = self.boolterm()
         while self._token._recognized_string == 'or':
@@ -1391,6 +1434,7 @@ class Parser(Lex):
             b_false = q2_false
         return b_true, b_false
 
+    # For boolterm, aka conditions
     def boolfactor(self):
         if self._token._recognized_string == 'not':
             self.get_token()
@@ -1420,6 +1464,7 @@ class Parser(Lex):
             self.genQuad('jump', '_', '_', '_')
         return b_true, b_false
     
+    # The actual expression, ex. x:=expression, print(expression)
     def expression(self):
         operator = self.optionalsign()
         if operator is not None:
@@ -1434,6 +1479,7 @@ class Parser(Lex):
             arg_1 = temp_var
         return arg_1
 
+    # Actual term, ex term = a * b * c
     def term(self):
         arg_1 = self.factor()
         while self._token._family == 'mulOperator':
@@ -1444,6 +1490,7 @@ class Parser(Lex):
             arg_1 = temp_var
         return arg_1
 
+    # Each part of term, ex term = factor * factor * factor
     def factor(self):
         if self._token._family == 'number':
             arg_1 = self._token._recognized_string
@@ -1470,6 +1517,8 @@ class Parser(Lex):
             self.error('Expected << number >> or << ( >> for arithmetic expression or << id >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
         return arg_1
 
+    # Used in factor. ex x := a * b * idtail
+    # factor can be a number, an expression or an id. The id part is handled by the idtail expression
     def idtail(self):
         if self._token._recognized_string == '(':
             self.get_token()
@@ -1480,10 +1529,12 @@ class Parser(Lex):
             else:
                 self.error('Expected << ) >>. Instead got << {0} >>'.format(self._token._recognized_string),self._line_number)
 
+    # In expression, for when you need to start one with a sign (ex -1)
     def optionalsign(self):
         operator = self.addoperator()
         return operator
 
+    # ex <,>, etc
     def reloperator(self):
         rel_op = None
         if self._token._family == 'relOperator':
@@ -1491,6 +1542,7 @@ class Parser(Lex):
             self.get_token()
         return rel_op 
 
+    # ex +,-
     def addoperator(self):
         add_operator = None
         if self._token._recognized_string == '+' or self._token._recognized_string == '-':
@@ -1499,6 +1551,7 @@ class Parser(Lex):
         # Doesn't need error. It's called from optionalSign()
         return add_operator
 
+    # ex *,/
     def muloperator(self):
         if self._token._family == 'mulOperator':
             operator = self._token._recognized_string
@@ -1510,6 +1563,8 @@ class Parser(Lex):
 #       C Code Generator        #
 #===============================#  
 
+# Used in main to generate the c file
+# The c file is used solely for the grading of the project by the professor.
 class CCodeGenerator(Parser):
     
     def __init__(self, subprogram_flag = None,  c_code_file = None, ci_var_list = list()):
@@ -1517,36 +1572,47 @@ class CCodeGenerator(Parser):
         self._subprogram_flag = subprogram_flag
         self._c_code_file = c_code_file
 
+    # The actual generator method
     def generate_code(self):
-        self._c_code_file.write('#include <stdio.h>\n\n')
-        arithmetic_operators = ['+', '-', '*', '/']
-        relational_operators = ['<', '>', '=', '<=', '>=', '<>']
+        self._c_code_file.write('#include <stdio.h>\n\n')   # the first line in a c file
+        arithmetic_operators = ['+', '-', '*', '/']         # used later
+        relational_operators = ['<', '>', '=', '<=', '>=', '<>']    # used later
+        # The c file is being generated according to the quads
         for quad in self._quads_list:
+
             if quad.op == 'begin_block':
                 c_variable_line = ""  # Init
+                # Write the variables from the cimple file to the c
                 if self._ci_var_list:
                     for ci_variable in self._ci_var_list:
                         c_variable_line = c_variable_line + ci_variable + ',' + ' '
+                # Write the temp variables
                 if self._temp_var_list:
                     for self._temp_variable in self._temp_var_list:
                         c_variable_line = c_variable_line + self._temp_variable + ',' + ' '
+                # Begin the actual code in c
                 if c_variable_line != "":
                     self._c_code_file.write('int ' + c_variable_line[:-2] + ';' + '\n\n')
                     self._c_code_file.write('int main()\n{\n')  
+            # End of file
             elif quad.op == 'halt':
                 self._c_code_file.write('\tL_' + str(quad.label) + ': {}' +  '  //(' + str(quad.op) + ', ' + str(quad.arg1) + ', ' + str(
                         quad.arg2) + ', ' + str(quad.dest) + ')\n')
+            # Close the c file
             elif quad.op == 'end_block':
                 self._c_code_file.write('}')
+            # Arithmetic expressions
             elif quad.op in arithmetic_operators:
                 self._c_code_file.write(
                     '\tL_' + str(quad.label) + ': ' + str(quad.dest) + '=' + str(quad.arg1) + ' ' + str(quad.op) + ' ' + str(
                         quad.arg2) + ';' + '  //(' + str(quad.op) + ', ' + str(quad.arg1) + ', ' + str(
                         quad.arg2) + ', ' + str(quad.dest) + ')\n')
+            # Assignment in cimple translated in c
             elif quad.op == ':=':
                 self._c_code_file.write(
                     '\tL_' + str(quad.label) + ': ' + str(quad.dest) + '=' + str(quad.arg1) + ';' + '  //(' + str(
                         quad.op) + ', ' + str(quad.arg1) + ', ' + str(quad.arg2) + ', ' + str(quad.dest) + ')\n')
+            # Relational expressions in cimple translated in c
             elif quad.op in relational_operators:
                 if quad.op == '=':
                     ci_relational_operator = '=='
@@ -1557,18 +1623,22 @@ class CCodeGenerator(Parser):
                 self._c_code_file.write('\tL_' + str(quad.label) + ': ' + 'if (' + str(quad.arg1) + ci_relational_operator + str(
                     quad.arg2) + ')' + ' goto L_' + str(quad.dest) + ';' + '  //(' + str(quad.op) + ', ' + str(
                     quad.arg1) + ', ' + str(quad.arg2) + ', ' + str(quad.dest) + ')\n')
+            # Jump in cimple translated in c
             elif quad.op == 'jump':
                 self._c_code_file.write(
                     '\tL_' + str(quad.label) + ': ' + 'goto L_' + str(quad.dest) + ';' + '  //(' + str(quad.op) + ', ' + str(
                         quad.arg1) + ', ' + str(quad.arg2) + ', ' + str(quad.dest) + ')\n')
+            # Input in cimple translated in c
             elif quad.op == 'inp':
                 self._c_code_file.write(
                     '\tL_' + str(quad.label) + ': ' + 'scanf(\"%d\"' + ', &' + str(quad.arg1) + ')' + ';' + '  //(' + str(
                         quad.op) + ', ' + str(quad.arg1) + ', ' + str(quad.arg2) + ', ' + str(quad.dest) + ')\n')
+            # Output in cimple translated in c
             elif quad.op == 'out':
                 self._c_code_file.write(
                     '\tL_' + str(quad.label) + ': ' + 'printf(\"''%d\\n\"' + ', ' + str(quad.arg1) + ')' + ';' + '  //(' + str(
                         quad.op) + ', ' + str(quad.arg1) + ', ' + str(quad.arg2) + ', ' + str(quad.dest) + ')\n')
+            # Output in cimple translated in c
             elif quad.op == 'retv':
                 self._c_code_file.write(
                     '\tL_' + str(quad.label) + ': ' + 'return ' + str(quad.arg1) + ';' + '  //(' + str(
@@ -1581,6 +1651,9 @@ def main():
     #input_file_name = input_file    # will be used to create the .int, .c, .asm, files with the same name as the input file
     #input_file = open(input_file,'r')
     
+    # The next two lines have being used to input a testing.ci file into the compiler without using command line input
+    # That is because debugging with command line input was tricky
+    # Place the next two lines in comments and uncomment the equivalent two lines from above
     input_file_name = "testing.ci"
     input_file = open('testing.ci','r')
 
@@ -1594,7 +1667,7 @@ def main():
     parser.inter_code_file_gen(input_file_name)
     parser._symbol_table_file.close()
     
-
+    # If the cimple file has no subprograms, we can create the c file
     if parser._subprogram_flag == False:
         print('C-imple file has no subprograms. Generating C file...')
         c_generator = CCodeGenerator()
@@ -1604,7 +1677,7 @@ def main():
     else:
         print('C-imple file has subprograms. C file generation aborted...')
 
-
+    # close opened files
     parser._assembly_file.close()
     input_file.close()
 
