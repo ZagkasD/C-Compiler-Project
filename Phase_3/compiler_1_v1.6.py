@@ -690,7 +690,6 @@ class Parser(Lex):
         #the entity for storing to the register
         entity= self.search_entity(variable)
         #1.2.3.5 global variable
-        nesting_level = self.check_nesting_level(entity._name)
         if (entity._datatype=='Variable' and self.check_nesting_level(entity._name)==0):# nesting level = 0 because it's the main program
             self._assembly_file.write('  sw $t%s, -%d($s0)\n' % (register_number, entity._offset))
         #1.2.3.1 local/temp variable or standard parameter with input mode value
