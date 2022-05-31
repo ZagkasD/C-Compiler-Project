@@ -88,8 +88,8 @@ class Lex(Token):
         pass
 
     def error(self,error_msg,line_number):
-        #print("Error in file:"+sys.argv[1]+' || line:'+str(line_number)+' || '+error_msg)
-        print("Error in file: testing.ci"+' || line: '+str(line_number)+' || '+error_msg)
+        print("Error in file:"+sys.argv[1]+' || line:'+str(line_number)+' || '+error_msg)
+        #print("Error in file: testing.ci"+' || line: '+str(line_number)+' || '+error_msg)
         self._input_file.close()
         exit(1)
 
@@ -690,21 +690,22 @@ class Parser(Lex):
         #the entity for storing to the register
         entity= self.search_entity(variable)
         #1.2.3.5 global variable
+        nesting_level = self.check_nesting_level(entity._name)
         if (entity._datatype=='Variable' and self.check_nesting_level(entity._name)==0):# nesting level = 0 because it's the main program
             self._assembly_file.write('  sw $t%s, -%d($s0)\n' % (register_number, entity._offset))
         #1.2.3.1 local/temp variable or standard parameter with input mode value
-        elif (entity._datatype=='Variable' and self.check_nesting_level(entity._name)==self._scopes_list[-1]._nesting_level) or (entity._datatype=='Parameter' and self._check_nesting_level(entity._name)==self._scopes_list[-1]._nesting_level and entity._mode=='in') or (entity._datatype=='Tmp_Variable'):
+        elif (entity._datatype=='Variable' and self.check_nesting_level(entity._name)==self._scopes_list[-1]._nesting_level) or (entity._datatype=='Parameter' and self.check_nesting_level(entity._name)==self._scopes_list[-1]._nesting_level and entity._mode=='cv') or (entity._datatype=='Tmp_Variable'):
             self._assembly_file.write('  sw $t%s, -%d($s0)\n' % (register_number, entity._offset))
         #1.2.3.2  parameter passed with reference
-        elif (entity._datatype=='Parameter' and self.check_nesting_level(entity._name)==self._scopes_list[-1]._nesting_level and entity._mode=='inout'):
+        elif (entity._datatype=='Parameter' and self.check_nesting_level(entity._name)==self._scopes_list[-1]._nesting_level and entity._mode=='ref'):
             self._assembly_file.write('  lw $t0, -%d($sp)\n' % entity._offset)
             self._assembly_file.write('  sw $t%s, 0($t0)\n' % register_number)
         ##@#1.2.3.3 local var, ancestor parameter with ref
-        elif (entity._datatype=='Variable' and self.check_nesting_level(entity._name)<self._scopes_list[-1]._nesting_level)or ( entity._datatype=='Parameter' and self._check_nesting_level(entity._name)<self._scopes_list[-1]._nesting_level and entity._mode=='in'):
+        elif (entity._datatype=='Variable' and self.check_nesting_level(entity._name)<self._scopes_list[-1]._nesting_level)or ( entity._datatype=='Parameter' and self.check_nesting_level(entity._name)<self._scopes_list[-1]._nesting_level and entity._mode=='cv'):
             self.gnlvcode(variable)
             self._assembly_file.write('  sw $t%s, ($t0)\n' % register_number)
         ##1.2.3.4 parameter with ref from ancestor
-        elif (entity._datatype=='Parameter' and self.check_nesting_level(entity._name)<self._scopes_list[-1]._nesting_level and entity._mode=='inout'):
+        elif (entity._datatype=='Parameter' and self.check_nesting_level(entity._name)<self._scopes_list[-1]._nesting_level and entity._mode=='ref'):
             self.gnlvcode(variable)
             self._assembly_file.write('  lw $t0, ($t0)\n')
             self._assembly_file.write('  sw $t%s, ($t0)\n' % register_number)
@@ -1669,17 +1670,17 @@ class CCodeGenerator(Parser):
                         quad.op) + ', ' + str(quad.arg1) + ', ' + str(quad.arg2) + ', ' + str(quad.dest) + ')\n')
 
 
-#def main(input_file):
-def main():
+def main(input_file):
+#def main():
 
-    #input_file_name = input_file    # will be used to create the .int, .c, .asm, files with the same name as the input file
-    #input_file = open(input_file,'r')
+    input_file_name = input_file    # will be used to create the .int, .c, .asm, files with the same name as the input file
+    input_file = open(input_file,'r')
     
     # The next two lines have being used to input a testing.ci file into the compiler without using command line input
     # That is because debugging with command line input was tricky
     # Place the next two lines in comments and uncomment the equivalent two lines from above
-    input_file_name = "testing.ci"
-    input_file = open('testing.ci','r')
+    #input_file_name = "testing.ci"
+    #input_file = open('testing.ci','r')
 
     parser = Parser(input_file) 
     parser._symbol_table_file = open(input_file_name[:-2] + 'symb','w') # create a new symb file with the same name as the input file
@@ -1705,5 +1706,5 @@ def main():
     parser._assembly_file.close()
     input_file.close()
 
-#main(sys.argv[1])
-main()
+main(sys.argv[1])
+#main()
