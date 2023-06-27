@@ -1,2 +1,2 @@
 # Compilers_1
-Project for Compilers 1 | Make a compiler for C-imple
+Project for Compilers 1 course | Make a compiler for C-imple
