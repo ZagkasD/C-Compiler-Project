@@ -6,11 +6,11 @@ A complete compiler, written in Python, designed to translate programs from the 
 
 The compiler is implemented as a traditional multi-pass system:
 
-- •	Lexical Analyzer: Reads the C-imple source file and converts the input into meaningful tokens.
+-Lexical Analyzer: Reads the C-imple source file and converts the input into meaningful tokens.
 
-&nbsp;&nbsp;&nbsp;&nbsp;•	Syntax Analyzer: Validates the sequence of tokens against C-imple's grammatical rules.
+- Syntax Analyzer: Validates the sequence of tokens against C-imple's grammatical rules.
 
-&nbsp;&nbsp;&nbsp;&nbsp;•	Symbol Table: Manages variable, function, and parameter data using a stack-based scope structure to handle variable access in nested functions.
+  - Symbol Table: Manages variable, function, and parameter data using a stack-based scope structure to handle variable access in nested functions.
 
 &nbsp;&nbsp;&nbsp;&nbsp;•	Intermediate Code Generator: Translates the parsed code into an intermediate language consisting of quads (four-part instructions similar to assembly).
 
