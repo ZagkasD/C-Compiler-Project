@@ -6,7 +6,7 @@ A complete compiler, written in Python, designed to translate programs from the 
 
 The compiler is implemented as a traditional multi-pass system:
 
-&nbsp;&nbsp;&nbsp;&nbsp;•	Lexical Analyzer: Reads the C-imple source file and converts the input into meaningful tokens.
+....•	Lexical Analyzer: Reads the C-imple source file and converts the input into meaningful tokens.
 
 &nbsp;&nbsp;&nbsp;&nbsp;•	Syntax Analyzer: Validates the sequence of tokens against C-imple's grammatical rules.
 
